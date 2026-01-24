@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Plants{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Active Plants</h1>
+    <a href="{{ url_for('plant_add') }}" class="btn">+ Add Plant</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🪻</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plants|length }}</div>
+            <div class="mini-stat-label">Active Plants</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">🌸</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plants|selectattr('status', 'eq', 'producing')|list|length }}</div>
+            <div class="mini-stat-label">Producing</div>
+        </div>
+    </div>
+    <div class="mini-stat blue">
+        <span class="mini-stat-icon">🍅</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ "%.1f"|format(plants|sum(attribute='total_yield')) }}</div>
+            <div class="mini-stat-label">Total Yield (oz)</div>
+        </div>
+    </div>
+</div>
+
+{% if plants %}
+<div class="card table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Plant</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Transplanted</th>
+                <th>Age</th>
+                <th>Expected Harvest</th>
+                <th>Yield</th>
+                <th style="width: 80px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td>
+                    <strong>{{ plant.plant_name or plant.seed_variety.variety_name }}</strong>
+                    <div style="font-size: 0.8rem; color: var(--soil-light);">{{ plant.seed_variety.plant_type|capitalize }}</div>
+                </td>
+                <td>
+                    {% if plant.status == 'producing' %}
+                        <span class="badge badge-success">Producing</span>
+                    {% elif plant.status == 'flowering' %}
+                        <span class="badge badge-warning">Flowering</span>
+                    {% elif plant.status == 'growing' %}
+                        <span class="badge badge-info">Growing</span>
+                    {% else %}
+                        <span class="badge">{{ plant.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.container.name if plant.container else '-' }}</td>
+                <td>{{ plant.transplant_date.strftime('%b %d') }}</td>
+                <td>{{ plant.days_since_transplant }}d</td>
+                <td>
+                    {% if plant.expected_harvest_date %}
+                        {{ plant.expected_harvest_date.strftime('%b %d') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if plant.total_yield > 0 %}
+                        <strong>{{ "%.1f"|format(plant.total_yield) }}</strong> oz
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🪻</div>
+        <p>No active plants</p>
+        <a href="{{ url_for('plant_add') }}" class="btn" style="margin-top: 1rem;">Add Your First Plant</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

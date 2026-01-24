@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Add Plant{% endblock %}
+{% block content %}
+<h1>Transplant Plant</h1>
+
+<!-- Capacity recommendation display area -->
+<div id="capacity-recommendation" class="card" style="display: none; margin-bottom: 1.5rem; border-left: 4px solid #4caf50;">
+    <h3 style="margin-top: 0;">Capacity Recommendation</h3>
+    <p id="capacity-message"></p>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-group">
+            <label for="seed_id">Seed Variety *</label>
+            <select id="seed_id" name="seed_id" required onchange="updateCapacityRecommendation()">
+                <option value="">Select variety...</option>
+                {% for seed in seeds %}
+                <option value="{{ seed.id }}" data-size="{{ seed.size_category or 'medium' }}">
+                    {{ seed.variety_name }} ({{ seed.plant_type }}) - {{ (seed.size_category or 'medium')|capitalize }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label for="seedling_id">From Seedling (optional)</label>
+                <select id="seedling_id" name="seedling_id">
+                    <option value="">None - Direct sow</option>
+                    {% for seedling in seedlings %}
+                    {% set available = seedling.quantity_potted_up or seedling.quantity_viable or 0 %}
+                    {% if available > 0 %}
+                    <option value="{{ seedling.id }}" data-seed-id="{{ seedling.seed_id }}">
+                        {{ seedling.seed.variety_name }}
+                        ({{ available }} available)
+                        {% if seedling.status == 'potted_up' %}- Potted Up{% elif seedling.status == 'ready' %}- Ready{% endif %}
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="grow_bag_id">Grow Bag</label>
+                <select id="grow_bag_id" name="grow_bag_id" onchange="updateCapacityRecommendation()">
+                    <option value="">None</option>
+                    {% for bag in growbags %}
+                    <option value="{{ bag.id }}" data-size="{{ bag.size_gallons }}">
+                        {{ bag.name }} ({{ bag.size_gallons }}gal)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="grid grid-3">
+            <div class="form-group">
+                <label for="transplant_date">Transplant Date *</label>
+                <input type="date" id="transplant_date" name="transplant_date" required>
+            </div>
+            <div class="form-group">
+                <label for="quantity">Quantity *</label>
+                <input type="number" id="quantity" name="quantity" min="1" value="1" required>
+                <small id="available-info" style="color: #666;"></small>
+            </div>
+            <div class="form-group">
+                <label for="plant_name">Plant Name (optional)</label>
+                <input type="text" id="plant_name" name="plant_name">
+                <small>If adding multiple, names will be numbered</small>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes"></textarea>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn">Add Plant</button>
+            <a href="{{ url_for('plants_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .grid-3 { grid-template-columns: 1fr; }
+    }
+</style>
+
+<script>
+    document.getElementById('transplant_date').valueAsDate = new Date();
+
+    // Store seedling available counts
+    const seedlingAvailable = {
+        {% for seedling in seedlings %}
+        '{{ seedling.id }}': {{ seedling.quantity_potted_up or seedling.quantity_viable or 0 }},
+        {% endfor %}
+    };
+
+    // When seedling is selected, auto-select matching seed and update available count
+    document.getElementById('seedling_id').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const seedId = selectedOption.dataset.seedId;
+        const quantityInput = document.getElementById('quantity');
+        const availableInfo = document.getElementById('available-info');
+
+        if (seedId) {
+            document.getElementById('seed_id').value = seedId;
+            updateCapacityRecommendation();
+        }
+
+        // Update quantity max and info based on seedling selection
+        if (this.value && seedlingAvailable[this.value]) {
+            const available = seedlingAvailable[this.value];
+            quantityInput.max = available;
+            quantityInput.value = Math.min(quantityInput.value || 1, available);
+            availableInfo.textContent = `${available} available from this seedling batch`;
+        } else {
+            quantityInput.removeAttribute('max');
+            availableInfo.textContent = '';
+        }
+    });
+
+    function updateCapacityRecommendation() {
+        const seedSelect = document.getElementById('seed_id');
+        const bagSelect = document.getElementById('grow_bag_id');
+        const recDiv = document.getElementById('capacity-recommendation');
+        const recMessage = document.getElementById('capacity-message');
+
+        if (!seedSelect.value || !bagSelect.value) {
+            recDiv.style.display = 'none';
+            return;
+        }
+
+        // Fetch capacity info from API
+        fetch(`/api/growbag-capacity?seed_id=${seedSelect.value}&growbag_id=${bagSelect.value}`)
+            .then(response => response.json())
+            .then(data => {
+                recDiv.style.display = 'block';
+                recMessage.innerHTML = `
+                    <strong>${data.seed_variety}</strong> is a <strong>${data.size_category}</strong> plant.<br>
+                    ${data.recommendation}
+                `;
+
+                // Update styling based on availability
+                if (data.available_space < 1) {
+                    recDiv.style.background = '#ffebee';
+                    recDiv.style.borderColor = '#f44336';
+                    recMessage.innerHTML += '<br><span style="color: #c62828; font-weight: bold;">Warning: This bag may be at capacity!</span>';
+                } else {
+                    recDiv.style.background = '#e8f5e9';
+                    recDiv.style.borderColor = '#4caf50';
+                }
+            })
+            .catch(err => {
+                recDiv.style.display = 'none';
+            });
+    }
+</script>
+{% endblock %}

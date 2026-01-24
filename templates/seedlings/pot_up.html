@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Pot Up Seedlings{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>Pot Up: {{ seedling.seed.variety_name }}</h1>
+    <a href="{{ url_for('seedling_detail', seedling_id=seedling.id) }}" class="btn btn-secondary">Cancel</a>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Current Seedling Info</h2>
+        <table>
+            <tr>
+                <th>Variety</th>
+                <td>{{ seedling.seed.variety_name }}</td>
+            </tr>
+            <tr>
+                <th>Plant Type</th>
+                <td>{{ seedling.seed.plant_type|capitalize }}</td>
+            </tr>
+            <tr>
+                <th>Size Category</th>
+                <td>{{ (seedling.seed.size_category or 'medium')|capitalize }}</td>
+            </tr>
+            <tr>
+                <th>Days Since Germination</th>
+                <td><strong>{{ seedling.days_since_germination }} days</strong></td>
+            </tr>
+            <tr>
+                <th>Viable Seedlings</th>
+                <td>{{ seedling.quantity_viable }}</td>
+            </tr>
+            <tr>
+                <th>Current Status</th>
+                <td>
+                    {% if seedling.status == 'growing' %}
+                        <span class="badge badge-info">Growing</span>
+                    {% elif seedling.status == 'germinating' %}
+                        <span class="badge badge-warning">Germinating</span>
+                    {% else %}
+                        <span class="badge">{{ seedling.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Pot Up Details</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label for="potted_up_date">Pot Up Date *</label>
+                <input type="date" id="potted_up_date" name="potted_up_date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="pot_size">Pot Size</label>
+                <select id="pot_size" name="pot_size">
+                    <option value="3 inch">3 inch</option>
+                    <option value="4 inch" selected>4 inch</option>
+                    <option value="6 inch">6 inch</option>
+                    <option value="1 quart">1 quart</option>
+                    <option value="1 gallon">1 gallon</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity_potted_up">Quantity Potted Up</label>
+                <input type="number" id="quantity_potted_up" name="quantity_potted_up"
+                       min="1" max="{{ seedling.quantity_viable }}"
+                       value="{{ seedling.quantity_viable }}">
+                <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    Max: {{ seedling.quantity_viable }} viable seedlings
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Notes (optional)</label>
+                <textarea id="notes" name="notes" placeholder="Any observations during potting up..."></textarea>
+            </div>
+
+            <button type="submit" class="btn">Pot Up Seedlings</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem; background: #fff8e1; border-left: 4px solid #ffc107;">
+    <h3 style="margin-top: 0;">What is Potting Up?</h3>
+    <p style="margin-bottom: 0;">
+        Potting up is the process of moving seedlings from their initial germination container
+        to larger individual pots. This gives the roots more room to grow before the final
+        transplant to grow bags or the garden. Typically done when seedlings have 2-4 true leaves
+        (not counting the seed leaves/cotyledons).
+    </p>
+</div>
+
+<script>
+    document.getElementById('potted_up_date').valueAsDate = new Date();
+</script>
+{% endblock %}

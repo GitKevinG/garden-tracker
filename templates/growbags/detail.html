@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ growbag.name }}{% endblock %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>{{ growbag.name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('growbags_list') }}" class="btn btn-secondary">Back to List</a>
+        <form method="POST" action="{{ url_for('growbag_delete', growbag_id=growbag.id) }}"
+              onsubmit="return confirm('Are you sure you want to delete this grow bag?');" style="margin: 0;">
+            <button type="submit" class="btn" style="background: #dc3545;">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Bag Details</h2>
+        <table>
+            <tr>
+                <th>Size</th>
+                <td><strong>{{ growbag.size_gallons }} gallons</strong></td>
+            </tr>
+            <tr>
+                <th>Location</th>
+                <td>{{ growbag.location or 'Not specified' }}</td>
+            </tr>
+            <tr>
+                <th>Current Plants</th>
+                <td>{{ growbag.current_plants }}</td>
+            </tr>
+            {% if growbag.notes %}
+            <tr>
+                <th>Notes</th>
+                <td>{{ growbag.notes }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Capacity by Plant Size</h2>
+        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+            How many plants of each size can fit in this {{ growbag.size_gallons }}-gallon bag:
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Size Category</th>
+                    <th>Max Plants</th>
+                    <th>Examples</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge badge-info">Compact</span></td>
+                    <td><strong>{{ capacity_info.compact }}</strong></td>
+                    <td style="color: #666; font-size: 0.85rem;">Herbs, lettuce, radish</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-success">Medium</span></td>
+                    <td><strong>{{ capacity_info.medium }}</strong></td>
+                    <td style="color: #666; font-size: 0.85rem;">Peppers, bush beans</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warning">Large</span></td>
+                    <td><strong>{{ capacity_info.large }}</strong></td>
+                    <td style="color: #666; font-size: 0.85rem;">Tomatoes, squash, cucumbers</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h2>Current Plants</h2>
+    {% if plants %}
+    <table>
+        <thead>
+            <tr>
+                <th>Plant</th>
+                <th>Size Category</th>
+                <th>Status</th>
+                <th>Days Planted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td>
+                    <strong>{{ plant.plant_name or plant.seed_variety.variety_name }}</strong>
+                    <div style="font-size: 0.8rem; color: #666;">{{ plant.seed_variety.plant_type|capitalize }}</div>
+                </td>
+                <td>
+                    {% set size_cat = plant.seed_variety.size_category or 'medium' %}
+                    {% if size_cat == 'compact' %}
+                        <span class="badge badge-info">Compact</span>
+                    {% elif size_cat == 'medium' %}
+                        <span class="badge badge-success">Medium</span>
+                    {% else %}
+                        <span class="badge badge-warning">Large</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if plant.status == 'producing' %}
+                        <span class="badge badge-success">Producing</span>
+                    {% elif plant.status == 'flowering' %}
+                        <span class="badge badge-warning">Flowering</span>
+                    {% else %}
+                        <span class="badge badge-info">Growing</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.days_since_transplant }}d</td>
+                <td>
+                    <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🌱</div>
+        <p>No plants currently in this grow bag.</p>
+        <a href="{{ url_for('plant_add') }}" class="btn" style="margin-top: 1rem;">Add a Plant</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

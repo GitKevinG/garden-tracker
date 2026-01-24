@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Manage Users</h1>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Create New User</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required minlength="4">
+            </div>
+
+            <button type="submit" class="btn">Create User</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Existing Users</h2>
+        {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                    <th style="width: 80px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td style="color: var(--soil-light);">{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge badge-warning">Admin</span>
+                        {% else %}
+                            <span class="badge badge-info">User</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <form method="POST" action="{{ url_for('admin_user_delete', user_id=user.id) }}"
+                              onsubmit="return confirm('Are you sure you want to delete {{ user.username }}? All their data will be deleted.');" style="margin: 0;">
+                            <button type="submit" class="btn btn-small" style="background: #dc3545;">Delete</button>
+                        </form>
+                        {% else %}
+                        <span style="color: var(--soil-light); font-size: 0.8rem;">You</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No other users yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

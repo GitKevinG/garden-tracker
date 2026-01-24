@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Planting Calendar - {{ month_name }} {{ year }}{% endblock %}
+{% block content %}
+<h1>Planting Calendar</h1>
+
+<!-- Month Navigation -->
+<div class="calendar-nav">
+    <a href="{{ url_for('planting_calendar', year=prev_year, month=prev_month) }}" class="btn">&larr; Previous</a>
+    <span class="current-month">{{ month_name }} {{ year }}</span>
+    <a href="{{ url_for('planting_calendar', year=next_year, month=next_month) }}" class="btn">Next &rarr;</a>
+</div>
+
+<!-- Frost Dates Info -->
+<div class="card frost-dates">
+    <div class="frost-date-item">
+        <strong>Zone 7a/b Last Frost:</strong>
+        <span>{{ last_frost.strftime('%B %d, %Y') }}</span>
+    </div>
+    <div class="frost-date-item">
+        <strong>First Frost:</strong>
+        <span>{{ first_frost.strftime('%B %d, %Y') }}</span>
+    </div>
+</div>
+
+<!-- Upcoming Tasks Timeline -->
+<div class="card">
+    <h2>Upcoming Tasks (Next 2 Weeks)</h2>
+    {% if upcoming_tasks %}
+    <div class="timeline">
+        {% for task in upcoming_tasks %}
+        <div class="timeline-item {{ task.type }}">
+            <span class="date">{{ task.date.strftime('%b %d') }}</span>
+            <span class="badge badge-{{ task.badge }}">{{ task.action }}</span>
+            <span>{{ task.name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-tasks">No upcoming tasks in the next 2 weeks.</p>
+    {% endif %}
+</div>
+
+<!-- Visual Calendar Grid -->
+<div class="card">
+    <h2>{{ month_name }} {{ year }}</h2>
+    <div class="calendar-scroll-wrapper">
+    <div class="calendar-grid">
+        <!-- Day Headers -->
+        <div class="calendar-header">Sun</div>
+        <div class="calendar-header">Mon</div>
+        <div class="calendar-header">Tue</div>
+        <div class="calendar-header">Wed</div>
+        <div class="calendar-header">Thu</div>
+        <div class="calendar-header">Fri</div>
+        <div class="calendar-header">Sat</div>
+
+        <!-- Day Cells -->
+        {% for week in weeks %}
+            {% for day in week %}
+            <div class="calendar-day {% if day.month != month %}other-month{% endif %}{% if day == today %} today{% endif %}">
+                <span class="day-number">{{ day.day }}</span>
+                {% if day in events %}
+                    {% for item in events[day].seed_starts[:3] %}
+                    <div class="event event-seed" title="Start {{ item.name }} seeds">Start {{ item.name }}</div>
+                    {% endfor %}
+                    {% if events[day].seed_starts|length > 3 %}
+                    <div class="event event-seed">+{{ events[day].seed_starts|length - 3 }} more</div>
+                    {% endif %}
+
+                    {% for item in events[day].transplants[:3] %}
+                    <div class="event event-transplant" title="Transplant {{ item.name }}">Transplant {{ item.name }}</div>
+                    {% endfor %}
+                    {% if events[day].transplants|length > 3 %}
+                    <div class="event event-transplant">+{{ events[day].transplants|length - 3 }} more</div>
+                    {% endif %}
+
+                    {% for item in events[day].harvests[:3] %}
+                    <div class="event event-harvest" title="Harvest {{ item.name }}">Harvest {{ item.name }}</div>
+                    {% endfor %}
+                    {% if events[day].harvests|length > 3 %}
+                    <div class="event event-harvest">+{{ events[day].harvests|length - 3 }} more</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="calendar-legend">
+        <span class="legend-item"><span class="dot seed"></span> Start Seeds</span>
+        <span class="legend-item"><span class="dot transplant"></span> Transplant</span>
+        <span class="legend-item"><span class="dot harvest"></span> Expected Harvest</span>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="card">
+    <h2>Quick Actions</h2>
+    <div class="quick-actions">
+        <a href="{{ url_for('seedling_add') }}" class="btn">Start New Seedlings</a>
+        <a href="{{ url_for('plant_add') }}" class="btn">Transplant Plant</a>
+        <a href="{{ url_for('planting_calendar', year=today.year, month=today.month) }}" class="btn btn-secondary">Today</a>
+    </div>
+</div>
+{% endblock %}

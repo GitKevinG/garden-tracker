@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ plant.plant_name or plant.seed_variety.variety_name }}{% endblock %}
+{% block content %}
+<h1>{{ plant.plant_name or plant.seed_variety.variety_name }}</h1>
+<div class="grid grid-2">
+    <div class="card"><h2>Plant Info</h2>
+        <p><strong>Variety:</strong> {{ plant.seed_variety.variety_name }}</p>
+        <p><strong>Transplanted:</strong> {{ plant.transplant_date }}</p>
+        <p><strong>Days Old:</strong> {{ plant.days_since_transplant }}</p>
+        <p><strong>Status:</strong> {{ plant.status }}</p>
+        <p><strong>Location:</strong> {{ plant.container.name if plant.container else 'None' }}</p>
+    </div>
+    <div class="card"><h2>Yield Stats</h2>
+        <p><strong>Total Yield:</strong> {{ "%.1f"|format(plant.total_yield) }} oz</p>
+        <p><strong>Harvest Count:</strong> {{ plant.harvest_count }}</p>
+    </div>
+</div>
+<div class="card">
+    <h2>Add Progress Log</h2>
+    <form method="POST" action="{{ url_for('progress_log_add', plant_id=plant.id) }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Log Date</label>
+                <input type="date" name="log_date" required>
+            </div>
+            <div class="form-group">
+                <label>Growth Stage</label>
+                <select name="growth_stage">
+                    <option value="">Select...</option>
+                    <option value="seedling">Seedling</option>
+                    <option value="vegetative">Vegetative</option>
+                    <option value="flowering">Flowering</option>
+                    <option value="fruiting">Fruiting</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Observations</label>
+            <textarea name="observations"></textarea>
+        </div>
+        <button type="submit" class="btn">Add Log</button>
+    </form>
+</div>
+{% endblock %}

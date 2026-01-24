@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ seed.variety_name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="color: #3e2723; margin: 0;">Edit Seed: {{ seed.variety_name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('seed_detail', seed_id=seed.id) }}" class="btn btn-secondary">Back to Details</a>
+    </div>
+</div>
+
+<form method="POST">
+    <div class="grid grid-2">
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Seed Information</h2>
+            <table class="detail-style-table">
+                <tr>
+                    <th>Variety Name *</th>
+                    <td><input type="text" name="variety_name" value="{{ seed.variety_name }}" required></td>
+                </tr>
+                <tr>
+                    <th>Plant Type *</th>
+                    <td>
+                        <select name="plant_type" required>
+                            <option value="">Select type...</option>
+                            <optgroup label="Nightshades">
+                                <option value="tomato" {% if seed.plant_type == 'tomato' %}selected{% endif %}>Tomato</option>
+                                <option value="pepper" {% if seed.plant_type == 'pepper' %}selected{% endif %}>Pepper</option>
+                                <option value="eggplant" {% if seed.plant_type == 'eggplant' %}selected{% endif %}>Eggplant</option>
+                                <option value="potato" {% if seed.plant_type == 'potato' %}selected{% endif %}>Potato</option>
+                            </optgroup>
+                            <optgroup label="Brassicas">
+                                <option value="broccoli" {% if seed.plant_type == 'broccoli' %}selected{% endif %}>Broccoli</option>
+                                <option value="cauliflower" {% if seed.plant_type == 'cauliflower' %}selected{% endif %}>Cauliflower</option>
+                                <option value="cabbage" {% if seed.plant_type == 'cabbage' %}selected{% endif %}>Cabbage</option>
+                            </optgroup>
+                            <optgroup label="Leafy Greens">
+                                <option value="lettuce" {% if seed.plant_type == 'lettuce' %}selected{% endif %}>Lettuce</option>
+                                <option value="spinach" {% if seed.plant_type == 'spinach' %}selected{% endif %}>Spinach</option>
+                                <option value="kale" {% if seed.plant_type == 'kale' %}selected{% endif %}>Kale</option>
+                            </optgroup>
+                            <optgroup label="Cucurbits">
+                                <option value="cucumber" {% if seed.plant_type == 'cucumber' %}selected{% endif %}>Cucumber</option>
+                                <option value="zucchini" {% if seed.plant_type == 'zucchini' %}selected{% endif %}>Zucchini</option>
+                                <option value="squash_winter" {% if seed.plant_type == 'squash_winter' %}selected{% endif %}>Winter Squash</option>
+                            </optgroup>
+                            <optgroup label="Roots">
+                                <option value="carrot" {% if seed.plant_type == 'carrot' %}selected{% endif %}>Carrot</option>
+                                <option value="radish" {% if seed.plant_type == 'radish' %}selected{% endif %}>Radish</option>
+                                <option value="onion" {% if seed.plant_type == 'onion' %}selected{% endif %}>Onion</option>
+                            </optgroup>
+                            <option value="other" {% if seed.plant_type == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Quantity in Stock *</th>
+                    <td><input type="number" name="quantity" value="{{ seed.quantity }}" required></td>
+                </tr>
+                <tr>
+                    <th>Supplier</th>
+                    <td><input type="text" name="supplier" value="{{ seed.supplier or '' }}"></td>
+                </tr>
+                <tr>
+                    <th>Purchase Date</th>
+                    <td><input type="date" name="purchase_date" value="{{ seed.purchase_date.strftime('%Y-%m-%d') if seed.purchase_date else '' }}"></td>
+                </tr>
+                <tr>
+                    <th>Expiration Date</th>
+                    <td><input type="date" name="expiration_date" value="{{ seed.expiration_date.strftime('%Y-%m-%d') if seed.expiration_date else '' }}"></td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Growing Specifications</h2>
+            <table class="detail-style-table">
+                <tr>
+                    <th>Days to Maturity</th>
+                    <td><input type="number" name="days_to_maturity" value="{{ seed.days_to_maturity or '' }}"></td>
+                </tr>
+                <tr>
+                    <th>Weeks to Transplant</th>
+                    <td><input type="number" name="weeks_to_transplant" value="{{ seed.weeks_to_transplant or 6 }}"></td>
+                </tr>
+                <tr>
+                    <th>Plant Size Category</th>
+                    <td>
+                        <select name="size_category">
+                            <option value="compact" {% if seed.size_category == 'compact' %}selected{% endif %}>Compact (herbs, lettuce, radish)</option>
+                            <option value="medium" {% if seed.size_category == 'medium' or not seed.size_category %}selected{% endif %}>Medium (peppers, bush beans)</option>
+                            <option value="large" {% if seed.size_category == 'large' %}selected{% endif %}>Large (tomatoes, squash, cucumbers)</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Germination Rate (%)</th>
+                    <td><input type="number" name="germination_rate" step="0.1" value="{{ seed.germination_rate or '' }}"></td>
+                </tr>
+            </table>
+            
+            <div style="margin-top: 1.5rem;">
+                <strong style="display: block; margin-bottom: 0.5rem; color: #3e2723;">Notes:</strong>
+                <textarea name="notes" rows="4" style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">{{ seed.notes or '' }}</textarea>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="submit" class="btn" style="background-color: #4b6a27; padding: 0.8rem 2rem;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<style>
+    /* Mimics the Seed Details table structure exactly */
+    .detail-style-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+    }
+
+    .detail-style-table th {
+        background-color: #354a3a !important; /* Forest Green */
+        color: white !important;
+        text-align: left;
+        padding: 12px 15px;
+        width: 45%;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #ffffff33;
+    }
+
+    .detail-style-table td {
+        padding: 5px 15px;
+        border-bottom: 1px solid #eee;
+        background-color: #fff;
+        vertical-align: middle;
+    }
+
+    /* Invisible inputs to maintain the 'table text' look */
+    .detail-style-table input, 
+    .detail-style-table select {
+        width: 100%;
+        border: none !important;
+        outline: none !important;
+        padding: 8px 0;
+        font-size: 0.95rem;
+        background: transparent;
+        color: #333;
+    }
+
+    .detail-style-table tr:last-child th,
+    .detail-style-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Detail page layout grid */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    @media (max-width: 800px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}

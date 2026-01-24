@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Start New Seedlings{% endblock %}
+
+{% block content %}
+<h1>Start New Seedlings</h1>
+
+<div class="card">
+    <form method="POST">
+        <div class="form-group">
+            <label for="seed_id">Seed Variety *</label>
+            <select id="seed_id" name="seed_id" required>
+                <option value="">Select seed...</option>
+                {% for seed in seeds %}
+                <option value="{{ seed.id }}">
+                    {{ seed.variety_name }} ({{ seed.plant_type }}) - {{ seed.quantity }} available
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="grid grid-3">
+            <div class="form-group">
+                <label for="sown_date">Sown Date *</label>
+                <input type="date" id="sown_date" name="sown_date" required>
+                <small>When seeds were planted</small>
+            </div>
+
+            <div class="form-group">
+                <label for="germination_date">Germination Date</label>
+                <input type="date" id="germination_date" name="germination_date">
+                <small>When seeds sprouted (leave blank if not yet)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location"
+                       placeholder="e.g., Kitchen windowsill">
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label for="quantity_started">Quantity Started *</label>
+                <input type="number" id="quantity_started" name="quantity_started"
+                       min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity_viable">Quantity Viable</label>
+                <input type="number" id="quantity_viable" name="quantity_viable" min="0">
+                <small>Leave blank to match quantity started</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes"
+                      placeholder="Soil mix, germination method, etc."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn">Start Seedlings</button>
+            <a href="{{ url_for('seedlings_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date as default for sown_date
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('sown_date').value = today;
+
+    // Auto-fill quantity viable when quantity started changes
+    document.getElementById('quantity_started').addEventListener('change', function() {
+        const viableInput = document.getElementById('quantity_viable');
+        if (!viableInput.value) {
+            viableInput.value = this.value;
+        }
+    });
+</script>
+
+<style>
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .grid-3 { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}

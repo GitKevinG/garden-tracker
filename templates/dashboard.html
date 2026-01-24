@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Garden Tracker{% endblock %}
+
+{% block content %}
+<h1>Garden Dashboard</h1>
+
+<!-- Mini Stats Row -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🪻</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ active_plants }}</div>
+            <div class="mini-stat-label">Active Plants</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">🌱</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ active_seedlings }}</div>
+            <div class="mini-stat-label">Active Seedlings</div>
+        </div>
+    </div>
+    <div class="mini-stat blue">
+        <span class="mini-stat-icon">🪴</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ available_space }}</div>
+            <div class="mini-stat-label">Available Spaces</div>
+        </div>
+    </div>
+    <div class="mini-stat red">
+        <span class="mini-stat-icon">🌰</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ low_seeds|length }}</div>
+            <div class="mini-stat-label">Low Stock Seeds</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Widget Grid -->
+<div class="grid grid-2">
+    <!-- Ready for Potting Up Widget -->
+    {% if ready_for_pot_up %}
+    <div class="widget">
+        <div class="widget-header" style="background: linear-gradient(135deg, #ffc107 0%, #e6a800 100%);">
+            <span>Ready for Potting Up</span>
+            <span class="widget-count">{{ ready_for_pot_up|length }}</span>
+        </div>
+        <div class="widget-body">
+            <table class="table-compact">
+                <thead>
+                    <tr>
+                        <th>Variety</th>
+                        <th>Qty</th>
+                        <th>Age</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for seedling in ready_for_pot_up[:5] %}
+                    <tr>
+                        <td>{{ seedling.seed.variety_name }}</td>
+                        <td>{{ seedling.quantity_viable }}</td>
+                        <td>{{ seedling.days_since_germination }}d</td>
+                        <td>
+                            <a href="{{ url_for('seedling_pot_up', seedling_id=seedling.id) }}" class="btn btn-small" style="background: #ffc107; color: #333;">Pot Up</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if ready_for_pot_up|length > 5 %}
+            <p style="text-align: center; margin-top: 1rem; color: var(--soil-light);">
+                +{{ ready_for_pot_up|length - 5 }} more
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ready to Transplant Widget -->
+    <div class="widget">
+        <div class="widget-header green">
+            <span>Ready to Transplant</span>
+            <span class="widget-count">{{ ready_seedlings|length }}</span>
+        </div>
+        <div class="widget-body">
+            {% if ready_seedlings %}
+                <table class="table-compact">
+                    <thead>
+                        <tr>
+                            <th>Variety</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seedling in ready_seedlings[:5] %}
+                        <tr>
+                            <td>{{ seedling.seed.variety_name }}</td>
+                            <td>{{ seedling.quantity_potted_up or seedling.quantity_viable }}</td>
+                            <td>
+                                {% if seedling.status == 'potted_up' %}
+                                    <span class="badge" style="background: #fff3cd; color: #856404; font-size: 0.7rem;">Potted</span>
+                                {% else %}
+                                    <span class="badge badge-success" style="font-size: 0.7rem;">Ready</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('plant_add') }}?seedling_id={{ seedling.id }}" class="btn btn-small">Transplant</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if ready_seedlings|length > 5 %}
+                <p style="text-align: center; margin-top: 1rem; color: var(--soil-light);">
+                    +{{ ready_seedlings|length - 5 }} more
+                </p>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🌱</div>
+                    <p>No seedlings ready for transplanting</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Upcoming Harvests Widget -->
+    <div class="widget">
+        <div class="widget-header orange">
+            <span>Upcoming Harvests</span>
+            <span class="widget-count">{{ upcoming_harvests|length }}</span>
+        </div>
+        <div class="widget-body">
+            {% if upcoming_harvests %}
+                <table class="table-compact">
+                    <thead>
+                        <tr>
+                            <th>Plant</th>
+                            <th>Expected</th>
+                            <th>Days</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plant in upcoming_harvests[:5] %}
+                        <tr>
+                            <td>{{ plant.plant_name or plant.seed_variety.variety_name }}</td>
+                            <td>{{ plant.expected_harvest_date.strftime('%b %d') }}</td>
+                            <td>
+                                {% set days = (plant.expected_harvest_date - today).days %}
+                                {% if days == 0 %}
+                                    <span class="badge badge-success">Today</span>
+                                {% elif days <= 3 %}
+                                    <span class="badge badge-warning">{{ days }}d</span>
+                                {% else %}
+                                    {{ days }}d
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if upcoming_harvests|length > 5 %}
+                <p style="text-align: center; margin-top: 1rem; color: var(--soil-light);">
+                    +{{ upcoming_harvests|length - 5 }} more
+                </p>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">🍅</div>
+                    <p>No upcoming harvests in the next 2 weeks</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Harvests Widget -->
+    <div class="widget">
+        <div class="widget-header blue">
+            <span>Recent Harvests</span>
+            <span class="widget-count">{{ recent_harvests|length }}</span>
+        </div>
+        <div class="widget-body">
+            {% if recent_harvests %}
+                <table class="table-compact">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Plant</th>
+                            <th>Amount</th>
+                            <th>Quality</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for harvest in recent_harvests[:5] %}
+                        <tr>
+                            <td>{{ harvest.harvest_date.strftime('%b %d') }}</td>
+                            <td>{{ harvest.plant.seed_variety.variety_name }}</td>
+                            <td>{{ harvest.amount }}{{ harvest.unit }}</td>
+                            <td>
+                                {% if harvest.quality_rating %}
+                                    {% if harvest.quality_rating >= 8 %}
+                                        <span class="badge badge-success">{{ harvest.quality_rating }}/10</span>
+                                    {% elif harvest.quality_rating >= 5 %}
+                                        <span class="badge badge-warning">{{ harvest.quality_rating }}/10</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">{{ harvest.quality_rating }}/10</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span style="color: var(--soil-light);">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="{{ url_for('harvests_list') }}" class="btn btn-small btn-secondary">View All</a>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>No harvests in the last 7 days</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Low Seed Inventory Widget -->
+    <div class="widget">
+        <div class="widget-header" style="background: linear-gradient(135deg, var(--terracotta) 0%, #a84832 100%);">
+            <span>Low Seed Inventory</span>
+            <span class="widget-count">{{ low_seeds|length }}</span>
+        </div>
+        <div class="widget-body">
+            {% if low_seeds %}
+                <table class="table-compact">
+                    <thead>
+                        <tr>
+                            <th>Variety</th>
+                            <th>Type</th>
+                            <th>Stock</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for seed in low_seeds[:5] %}
+                        <tr>
+                            <td>{{ seed.variety_name }}</td>
+                            <td>{{ seed.plant_type }}</td>
+                            <td>
+                                {% if seed.quantity <= 5 %}
+                                    <span class="badge badge-danger">{{ seed.quantity }}</span>
+                                {% else %}
+                                    <span class="badge badge-warning">{{ seed.quantity }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('seed_detail', seed_id=seed.id) }}" class="btn btn-small">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if low_seeds|length > 5 %}
+                <p style="text-align: center; margin-top: 1rem; color: var(--soil-light);">
+                    +{{ low_seeds|length - 5 }} more
+                </p>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">✅</div>
+                    <p>All seeds adequately stocked</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card" style="margin-top: 1rem;">
+    <h2>Quick Actions</h2>
+    <div class="quick-actions">
+        <a href="{{ url_for('seedling_add') }}" class="btn">🌱 Start Seedlings</a>
+        <a href="{{ url_for('plant_add') }}" class="btn">🪴 Transplant</a>
+        <a href="{{ url_for('harvest_add') }}" class="btn">🍅 Record Harvest</a>
+        <a href="{{ url_for('seed_add') }}" class="btn btn-secondary">🌰 Add Seeds</a>
+        <a href="{{ url_for('growbag_add') }}" class="btn btn-secondary">➕ Add Grow Bag</a>
+    </div>
+</div>
+
+{% endblock %}

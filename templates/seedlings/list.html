@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Seedlings{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Active Seedlings</h1>
+    <a href="{{ url_for('seedling_add') }}" class="btn">+ Start New Seedlings</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🌱</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seedlings|length }}</div>
+            <div class="mini-stat-label">Batches</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">🌿</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seedlings|sum(attribute='quantity_viable') }}</div>
+            <div class="mini-stat-label">Total Seedlings</div>
+        </div>
+    </div>
+    <div class="mini-stat blue">
+        <span class="mini-stat-icon">✅</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seedlings|selectattr('status', 'eq', 'ready')|list|length }}</div>
+            <div class="mini-stat-label">Ready</div>
+        </div>
+    </div>
+</div>
+
+{% if seedlings %}
+<div class="card table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Variety</th>
+                <th>Status</th>
+                <th>Quantity</th>
+                <th>Sown</th>
+                <th>Germinated</th>
+                <th>Age</th>
+                <th>Transplant Date</th>
+                <th>Days Left</th>
+                <th>Location</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seedling in seedlings %}
+            <tr>
+                <td>
+                    <strong>{{ seedling.seed.variety_name }}</strong>
+                    <div style="font-size: 0.8rem; color: var(--soil-light);">{{ seedling.seed.plant_type|capitalize }}</div>
+                </td>
+                <td>
+                    {% if seedling.status == 'ready' %}
+                        <span class="badge badge-success">Ready</span>
+                    {% elif seedling.status == 'potted_up' %}
+                        <span class="badge" style="background: #fff3cd; color: #856404;">Potted Up</span>
+                    {% elif seedling.status == 'growing' %}
+                        <span class="badge badge-info">Growing</span>
+                    {% elif seedling.status == 'germinating' %}
+                        <span class="badge badge-warning">Germinating</span>
+                    {% else %}
+                        <span class="badge">{{ seedling.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ seedling.quantity_viable }}/{{ seedling.quantity_started }}</td>
+                <td>{{ seedling.sown_date.strftime('%b %d') if seedling.sown_date else '-' }}</td>
+                <td>{{ seedling.germination_date.strftime('%b %d') if seedling.germination_date else '-' }}</td>
+                <td>{{ seedling.days_since_sown }}d</td>
+                <td>{{ seedling.expected_transplant_date.strftime('%b %d') if seedling.expected_transplant_date else '-' }}</td>
+                <td>
+                    {% if seedling.days_until_transplant is not none %}
+                        {% if seedling.days_until_transplant < 0 %}
+                            <span class="badge badge-danger">{{ seedling.days_until_transplant|abs }}d overdue</span>
+                        {% elif seedling.days_until_transplant == 0 %}
+                            <span class="badge badge-success">Today!</span>
+                        {% elif seedling.days_until_transplant <= 7 %}
+                            <span class="badge badge-warning">{{ seedling.days_until_transplant }}d</span>
+                        {% else %}
+                            {{ seedling.days_until_transplant }}d
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="color: var(--soil-light);">{{ seedling.location or '-' }}</td>
+                <td style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('seedling_detail', seedling_id=seedling.id) }}" class="btn btn-small">View</a>
+                    <form method="POST" action="{{ url_for('seedling_delete', seedling_id=seedling.id) }}"
+                          onsubmit="return confirm('Delete this seedling batch?');" style="margin: 0;">
+                        <button type="submit" class="btn btn-small" style="background: #dc3545;">Del</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🌱</div>
+        <p>No active seedlings</p>
+        <a href="{{ url_for('seedling_add') }}" class="btn" style="margin-top: 1rem;">Start Your First Seedlings</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

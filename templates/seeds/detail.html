@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{{ seed.variety_name }} - Seed Details{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>{{ seed.variety_name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('seed_edit', seed_id=seed.id) }}" class="btn">Edit</a>
+        <a href="{{ url_for('seeds_list') }}" class="btn btn-secondary">Back to List</a>
+        <form action="{{ url_for('seed_delete', seed_id=seed.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete {{ seed.variety_name }}?');">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Seed Information</h2>
+        <table>
+            <tr>
+                <th>Plant Type</th>
+                <td>{{ seed.plant_type }}</td>
+            </tr>
+            <tr>
+                <th>Quantity in Stock</th>
+                <td>
+                    {% if seed.quantity <= 5 %}
+                        <span class="badge badge-danger">{{ seed.quantity }}</span>
+                    {% elif seed.quantity <= 10 %}
+                        <span class="badge badge-warning">{{ seed.quantity }}</span>
+                    {% else %}
+                        <span class="badge badge-success">{{ seed.quantity }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Supplier</th>
+                <td>{{ seed.supplier or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Purchase Date</th>
+                <td>{{ seed.purchase_date.strftime('%Y-%m-%d') if seed.purchase_date else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Expiration Date</th>
+                <td>{{ seed.expiration_date.strftime('%Y-%m-%d') if seed.expiration_date else '-' }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h2>Growing Specifications</h2>
+        <table>
+            <tr>
+                <th>Days to Maturity</th>
+                <td>{{ seed.days_to_maturity or '-' }} days</td>
+            </tr>
+            <tr>
+                <th>Weeks to Transplant</th>
+                <td>{{ seed.weeks_to_transplant or '-' }} weeks</td>
+            </tr>
+            <tr>
+                <th>Germination Rate</th>
+                <td>{{ seed.germination_rate or '-' }}%</td>
+            </tr>
+        </table>
+        
+        {% if seed.notes %}
+        <div style="margin-top: 1rem;">
+            <strong>Notes:</strong>
+            <p>{{ seed.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h2>Performance Statistics</h2>
+    <div class="grid grid-3">
+        <div class="stat-card">
+            <div class="stat-value">{{ plants|length }}</div>
+            <div class="stat-label">Total Plants Grown</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "%.1f"|format(total_yield) }}</div>
+            <div class="stat-label">Total Yield (oz)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ "%.1f"|format(avg_yield) }}</div>
+            <div class="stat-label">Average Yield per Plant (oz)</div>
+        </div>
+    </div>
+</div>
+
+{% if plants %}
+<div class="card" style="margin-top: 2rem;">
+    <h2>Plants from this Variety</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Plant Name</th>
+                <th>Transplant Date</th>
+                <th>Status</th>
+                <th>Total Harvests</th>
+                <th>Total Yield</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td>{{ plant.plant_name or seed.variety_name }}</td>
+                <td>{{ plant.transplant_date.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    {% if plant.status == 'producing' %}
+                        <span class="badge badge-success">{{ plant.status }}</span>
+                    {% elif plant.status == 'growing' %}
+                        <span class="badge badge-info">{{ plant.status }}</span>
+                    {% else %}
+                        <span class="badge">{{ plant.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.harvest_count }}</td>
+                <td>{{ "%.1f"|format(plant.total_yield) }} oz</td>
+                <td>
+                    <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

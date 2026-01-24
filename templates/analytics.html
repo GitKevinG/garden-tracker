@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<h1>Garden Analytics</h1>
+<div class="card">
+    <h2>Variety Performance</h2>
+    <table>
+        <thead>
+            <tr><th>Variety</th><th>Type</th><th>Plants</th><th>Total Yield</th><th>Avg Quality</th></tr>
+        </thead>
+        <tbody>
+            {% for stat in variety_stats %}
+            <tr>
+                <td>{{ stat.variety_name }}</td>
+                <td>{{ stat.plant_type }}</td>
+                <td>{{ stat.plant_count }}</td>
+                <td>{{ "%.1f"|format(stat.total_yield or 0) }} oz</td>
+                <td>{{ "%.1f"|format(stat.avg_quality or 0) }}/10</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

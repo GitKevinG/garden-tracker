@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Seed Inventory{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Seed Inventory</h1>
+    <a href="{{ url_for('seed_add') }}" class="btn">+ Add New Seed</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🌰</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seeds|length }}</div>
+            <div class="mini-stat-label">Varieties</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">📦</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seeds|sum(attribute='quantity') }}</div>
+            <div class="mini-stat-label">Total Seeds</div>
+        </div>
+    </div>
+    <div class="mini-stat red">
+        <span class="mini-stat-icon">⚠️</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ seeds|selectattr('quantity', 'le', 10)|list|length }}</div>
+            <div class="mini-stat-label">Low Stock</div>
+        </div>
+    </div>
+</div>
+
+{% if seeds %}
+<div class="card table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Variety</th>
+                <th>Type</th>
+                <th>Stock</th>
+                <th>Days to Maturity</th>
+                <th>Germ. Rate</th>
+                <th>Supplier</th>
+                <th>Expires</th>
+                <th style="width: 140px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seed in seeds %}
+            <tr>
+                <td><strong>{{ seed.variety_name }}</strong></td>
+                <td>{{ seed.plant_type|capitalize }}</td>
+                <td>
+                    {% if seed.quantity <= 5 %}
+                        <span class="badge badge-danger">{{ seed.quantity }}</span>
+                    {% elif seed.quantity <= 10 %}
+                        <span class="badge badge-warning">{{ seed.quantity }}</span>
+                    {% else %}
+                        <span class="badge badge-success">{{ seed.quantity }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ seed.days_to_maturity or '-' }}d</td>
+                <td>{{ seed.germination_rate|int if seed.germination_rate else '-' }}%</td>
+                <td style="color: var(--soil-light);">{{ seed.supplier or '-' }}</td>
+                <td>
+                    {% if seed.expiration_date %}
+                        {{ seed.expiration_date.strftime('%b %Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.25rem;">
+                        <a href="{{ url_for('seed_detail', seed_id=seed.id) }}" class="btn btn-small">View</a>
+                        <a href="{{ url_for('seed_edit', seed_id=seed.id) }}" class="btn btn-small btn-secondary">Edit</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🌰</div>
+        <p>No seeds in inventory yet</p>
+        <a href="{{ url_for('seed_add') }}" class="btn" style="margin-top: 1rem;">Add Your First Seed</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

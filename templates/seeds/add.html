@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Seed{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="color: #3e2723; margin: 0;">Add New Seed</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('seeds_list') }}" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+<form method="POST">
+    <div class="grid grid-2">
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Seed Information</h2>
+            <table class="detail-style-table">
+                <tr>
+                    <th>Variety Name *</th>
+                    <td><input type="text" name="variety_name" required placeholder="e.g. Brandywine"></td>
+                </tr>
+                <tr>
+                    <th>Plant Type *</th>
+                    <td>
+                        <select name="plant_type" required>
+                            <option value="">Select type...</option>
+                            <optgroup label="Nightshades (Fruit-bearing)">
+                                <option value="tomato">Tomato</option>
+                                <option value="pepper">Pepper</option>
+                                <option value="eggplant">Eggplant</option>
+                                <option value="potato">Potato</option>
+                                <option value="tomatillo">Tomatillo</option>
+                            </optgroup>
+                            <optgroup label="Leafy Greens">
+                                <option value="lettuce">Lettuce</option>
+                                <option value="spinach">Spinach</option>
+                                <option value="kale">Kale</option>
+                                <option value="chard">Swiss Chard</option>
+                                <option value="arugula">Arugula</option>
+                                <option value="bok_choy">Bok Choy</option>
+                            </optgroup>
+                            <optgroup label="Cucurbits (Vines & Squash)">
+                                <option value="cucumber">Cucumber</option>
+                                <option value="zucchini">Zucchini</option>
+                                <option value="squash_winter">Winter Squash/Pumpkin</option>
+                                <option value="melon">Melon/Watermelon</option>
+                            </optgroup>
+                            <optgroup label="Root Vegetables">
+                                <option value="carrot">Carrot</option>
+                                <option value="radish">Radish</option>
+                                <option value="beet">Beet</option>
+                                <option value="onion">Onion/Shallot</option>
+                                <option value="garlic">Garlic</option>
+                                <option value="turnip">Turnip</option>
+                            </optgroup>
+                            <optgroup label="Legumes (Beans & Peas)">
+                                <option value="bean_bush">Bush Bean</option>
+                                <option value="bean_pole">Pole Bean</option>
+                                <option value="pea">Pea</option>
+                            </optgroup>
+                            <optgroup label="Brassicas">
+                                <option value="broccoli">Broccoli</option>
+                                <option value="cauliflower">Cauliflower</option>
+                                <option value="cabbage">Cabbage</option>
+                                <option value="brussels_sprouts">Brussels Sprouts</option>
+                            </optgroup>
+                            <optgroup label="Herbs">
+                                <option value="basil">Basil</option>
+                                <option value="cilantro">Cilantro</option>
+                                <option value="parsley">Parsley</option>
+                                <option value="rosemary">Rosemary</option>
+                                <option value="mint">Mint</option>
+                                <option value="thyme">Thyme</option>
+                            </optgroup>
+                            <option value="other">Other / Not Listed</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Quantity *</th>
+                    <td><input type="number" name="quantity" min="0" required></td>
+                </tr>
+                <tr>
+                    <th>Supplier</th>
+                    <td><input type="text" name="supplier" placeholder="e.g. Baker Creek"></td>
+                </tr>
+                <tr>
+                    <th>Purchase Date</th>
+                    <td><input type="date" name="purchase_date"></td>
+                </tr>
+                <tr>
+                    <th>Expiration Date</th>
+                    <td><input type="date" name="expiration_date"></td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Growing Specifications</h2>
+            <table class="detail-style-table">
+                <tr>
+                    <th>Days to Maturity</th>
+                    <td><input type="number" name="days_to_maturity" placeholder="e.g. 75"></td>
+                </tr>
+                <tr>
+                    <th>Weeks to Transplant</th>
+                    <td><input type="number" name="weeks_to_transplant" value="6"></td>
+                </tr>
+                <tr>
+                    <th>Plant Size Category</th>
+                    <td>
+                        <select name="size_category">
+                            <option value="compact">Compact (herbs, lettuce, radish)</option>
+                            <option value="medium" selected>Medium (peppers, bush beans)</option>
+                            <option value="large">Large (tomatoes, squash, cucumbers)</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Germination Rate (%)</th>
+                    <td><input type="number" name="germination_rate" step="0.1"></td>
+                </tr>
+            </table>
+            
+            <div style="margin-top: 1.5rem;">
+                <strong style="display: block; margin-bottom: 0.5rem; color: #3e2723;">Notes:</strong>
+                <textarea name="notes" rows="4" style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 10px;" placeholder="Add notes here..."></textarea>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn" style="background-color: #4b6a27; padding: 0.8rem 2rem;">Add Seed</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<style>
+    /* Styling to match Seed Details exactly */
+    .detail-style-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+    }
+
+    .detail-style-table th {
+        background-color: #354a3a !important; /* Forest Green */
+        color: white !important;
+        text-align: left;
+        padding: 12px 15px;
+        width: 45%;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #ffffff33;
+    }
+
+    .detail-style-table td {
+        padding: 5px 15px;
+        border-bottom: 1px solid #eee;
+        background-color: #fff;
+    }
+
+    /* Transparent inputs to blend into the table row */
+    .detail-style-table input, 
+    .detail-style-table select {
+        width: 100%;
+        border: none !important;
+        outline: none !important;
+        padding: 8px 0;
+        font-size: 0.95rem;
+        background: transparent;
+        color: #333;
+    }
+
+    .detail-style-table tr:last-child th,
+    .detail-style-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Grid from detail page */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+
+    @media (max-width: 800px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}

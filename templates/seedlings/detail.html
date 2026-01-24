@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Seedling Details{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>{{ seedling.seed.variety_name }} Seedling</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('seedlings_list') }}" class="btn btn-secondary">Back to List</a>
+        <form method="POST" action="{{ url_for('seedling_delete', seedling_id=seedling.id) }}"
+              onsubmit="return confirm('Are you sure you want to delete this seedling batch?');" style="margin: 0;">
+            <button type="submit" class="btn" style="background: #dc3545;">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Seedling Information</h2>
+        <table>
+            <tr>
+                <th>Variety</th>
+                <td>{{ seedling.seed.variety_name }}</td>
+            </tr>
+            <tr>
+                <th>Plant Type</th>
+                <td>{{ seedling.seed.plant_type }}</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if seedling.status == 'ready' %}
+                        <span class="badge badge-success">Ready to Transplant</span>
+                    {% elif seedling.status == 'potted_up' %}
+                        <span class="badge" style="background: #fff3cd; color: #856404;">Potted Up</span>
+                    {% elif seedling.status == 'growing' %}
+                        <span class="badge badge-info">Growing</span>
+                    {% elif seedling.status == 'germinating' %}
+                        <span class="badge badge-warning">Germinating</span>
+                    {% elif seedling.status == 'transplanted' %}
+                        <span class="badge">Transplanted</span>
+                    {% else %}
+                        <span class="badge badge-danger">{{ seedling.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Location</th>
+                <td>{{ seedling.location or '-' }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h2>Timeline</h2>
+        <table>
+            <tr>
+                <th>Sown Date</th>
+                <td>{{ seedling.sown_date.strftime('%Y-%m-%d') if seedling.sown_date else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Days Since Sown</th>
+                <td><strong>{{ seedling.days_since_sown }} days</strong></td>
+            </tr>
+            <tr>
+                <th>Germination Date</th>
+                <td>
+                    {% if seedling.germination_date %}
+                        {{ seedling.germination_date.strftime('%Y-%m-%d') }}
+                        {% if seedling.days_to_germinate is not none %}
+                            <span style="color: #666; font-size: 0.85rem;">({{ seedling.days_to_germinate }} days to germinate)</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge badge-warning">Not yet germinated</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if seedling.germination_date %}
+            <tr>
+                <th>Days Since Germination</th>
+                <td><strong>{{ seedling.days_since_germination }} days</strong></td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>Expected Transplant Date</th>
+                <td>{{ seedling.expected_transplant_date.strftime('%Y-%m-%d') if seedling.expected_transplant_date else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Days Until Transplant</th>
+                <td>
+                    {% if seedling.days_until_transplant is not none %}
+                        {% if seedling.days_until_transplant < 0 %}
+                            <span class="badge badge-warning">{{ seedling.days_until_transplant|abs }} days overdue</span>
+                        {% elif seedling.days_until_transplant == 0 %}
+                            <span class="badge badge-success">Ready today!</span>
+                        {% else %}
+                            {{ seedling.days_until_transplant }} days
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Actual Transplant Date</th>
+                <td>{{ seedling.actual_transplant_date.strftime('%Y-%m-%d') if seedling.actual_transplant_date else '-' }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <h2>Quantity</h2>
+    <div class="grid grid-2">
+        <div class="stat-card">
+            <div class="stat-value">{{ seedling.quantity_started }}</div>
+            <div class="stat-label">Seeds Started</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ seedling.quantity_viable }}</div>
+            <div class="stat-label">Viable Seedlings</div>
+        </div>
+    </div>
+</div>
+
+{% if seedling.notes %}
+<div class="card" style="margin-top: 2rem;">
+    <h2>Notes</h2>
+    <p>{{ seedling.notes }}</p>
+</div>
+{% endif %}
+
+{% if not seedling.germination_date %}
+<div class="card" style="margin-top: 2rem; background: #e3f2fd; border: 2px solid #2196f3;">
+    <h2>Record Germination</h2>
+    <p>Seeds have sprouted? Record the germination date:</p>
+    <form method="POST" action="{{ url_for('seedling_update', seedling_id=seedling.id) }}">
+        <input type="hidden" name="status" value="growing">
+        <input type="hidden" name="quantity_viable" value="{{ seedling.quantity_viable }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label for="germination_date">Germination Date</label>
+                <input type="date" id="germination_date" name="germination_date" required>
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn" style="background: #2196f3;">Record Germination</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+    document.getElementById('germination_date').valueAsDate = new Date();
+</script>
+{% endif %}
+
+<div class="card" style="margin-top: 2rem;">
+    <h2>Update Status</h2>
+    <form method="POST" action="{{ url_for('seedling_update', seedling_id=seedling.id) }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="germinating" {% if seedling.status == 'germinating' %}selected{% endif %}>Germinating</option>
+                    <option value="growing" {% if seedling.status == 'growing' %}selected{% endif %}>Growing</option>
+                    <option value="potted_up" {% if seedling.status == 'potted_up' %}selected{% endif %}>Potted Up</option>
+                    <option value="ready" {% if seedling.status == 'ready' %}selected{% endif %}>Ready to Transplant</option>
+                    <option value="transplanted" {% if seedling.status == 'transplanted' %}selected{% endif %}>Transplanted</option>
+                    <option value="failed" {% if seedling.status == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity_viable">Viable Seedlings</label>
+                <input type="number" id="quantity_viable" name="quantity_viable" 
+                       min="0" max="{{ seedling.quantity_started }}" 
+                       value="{{ seedling.quantity_viable }}">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes">{{ seedling.notes or '' }}</textarea>
+        </div>
+        
+        <button type="submit" class="btn">Update Seedling</button>
+    </form>
+</div>
+
+{% if seedling.status == 'growing' and seedling.days_since_germination >= 14 %}
+<div class="card" style="margin-top: 2rem; background: #fff8e1; border: 2px solid #ffc107;">
+    <h2>Ready for Potting Up!</h2>
+    <p>These seedlings are {{ seedling.days_since_germination }} days old and ready to be potted up to larger containers.</p>
+    <a href="{{ url_for('seedling_pot_up', seedling_id=seedling.id) }}" class="btn" style="background: #ffc107; color: #333;">Pot Up Now</a>
+</div>
+{% endif %}
+
+{% if seedling.status == 'potted_up' %}
+<div class="card" style="margin-top: 2rem;">
+    <h2>Potting Up Details</h2>
+    <table>
+        <tr>
+            <th>Potted Up Date</th>
+            <td>{{ seedling.potted_up_date.strftime('%Y-%m-%d') if seedling.potted_up_date else '-' }}</td>
+        </tr>
+        <tr>
+            <th>Pot Size</th>
+            <td>{{ seedling.pot_size or '-' }}</td>
+        </tr>
+        <tr>
+            <th>Quantity Potted Up</th>
+            <td>{{ seedling.quantity_potted_up or seedling.quantity_viable }}</td>
+        </tr>
+        {% if seedling.days_since_potted_up is not none %}
+        <tr>
+            <th>Days Since Potting Up</th>
+            <td><strong>{{ seedling.days_since_potted_up }} days</strong></td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+{% endif %}
+
+{% if seedling.status == 'ready' or seedling.status == 'potted_up' %}
+<div class="card" style="margin-top: 2rem; background: #d4edda; border: 2px solid #28a745;">
+    <h2>Ready to Transplant!</h2>
+    <p>This seedling is ready to be transplanted to a grow bag.</p>
+    <a href="{{ url_for('plant_add') }}?seedling_id={{ seedling.id }}" class="btn">Transplant Now</a>
+</div>
+{% endif %}
+{% endblock %}

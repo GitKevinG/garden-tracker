@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Grow Bags{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Grow Bags</h1>
+    <a href="{{ url_for('growbag_add') }}" class="btn">+ Add Grow Bag</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🪴</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ growbags|length }}</div>
+            <div class="mini-stat-label">Containers</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">🌿</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ growbags|sum(attribute='current_plants') }}</div>
+            <div class="mini-stat-label">Plants</div>
+        </div>
+    </div>
+    <div class="mini-stat blue">
+        <span class="mini-stat-icon">📦</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ growbags|sum(attribute='max_plants') - growbags|sum(attribute='current_plants') }}</div>
+            <div class="mini-stat-label">Available</div>
+        </div>
+    </div>
+</div>
+
+{% if growbags %}
+<div class="card table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>Status</th>
+                <th>Notes</th>
+                <th style="width: 80px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bag in growbags %}
+            <tr>
+                <td><strong>{{ bag.name }}</strong></td>
+                <td>{{ bag.size_gallons }} gal</td>
+                <td>{{ bag.location or '-' }}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>{{ bag.current_plants }}/{{ bag.max_plants }}</span>
+                        <div style="flex: 1; max-width: 60px; background: var(--cream); border-radius: 3px; height: 6px; overflow: hidden;">
+                            {% set fill = (bag.current_plants / bag.max_plants * 100)|int if bag.max_plants > 0 else 0 %}
+                            <div style="width: {{ fill }}%; height: 100%; background: var(--leaf); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% if bag.is_full %}
+                        <span class="badge badge-warning">Full</span>
+                    {% elif bag.current_plants > 0 %}
+                        <span class="badge badge-success">{{ bag.available_space }} free</span>
+                    {% else %}
+                        <span class="badge badge-info">Empty</span>
+                    {% endif %}
+                </td>
+                <td style="color: var(--soil-light); font-size: 0.85rem;">{{ bag.notes|truncate(30) if bag.notes else '-' }}</td>
+                <td style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('growbag_detail', growbag_id=bag.id) }}" class="btn btn-small">View</a>
+                    <form method="POST" action="{{ url_for('growbag_delete', growbag_id=bag.id) }}"
+                          onsubmit="return confirm('Delete {{ bag.name }}?');" style="margin: 0;">
+                        <button type="submit" class="btn btn-small" style="background: #dc3545;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🪴</div>
+        <p>No grow bags yet</p>
+        <a href="{{ url_for('growbag_add') }}" class="btn" style="margin-top: 1rem;">Add Your First Grow Bag</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

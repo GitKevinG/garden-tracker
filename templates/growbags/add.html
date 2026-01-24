@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Add Grow Bag{% endblock %}
+{% block content %}
+<h1>Add Grow Bag</h1>
+<div class="card">
+    <form method="POST">
+        <div class="form-group">
+            <label>Name *</label>
+            <input type="text" name="name" required>
+        </div>
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Size (gallons) *</label>
+                <input type="number" name="size_gallons" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Max Plants *</label>
+                <input type="number" name="max_plants" min="1" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Location</label>
+            <input type="text" name="location">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes"></textarea>
+        </div>
+        <button type="submit" class="btn">Add Grow Bag</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Harvests{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Harvest Log</h1>
+    <a href="{{ url_for('harvest_add') }}" class="btn">+ Record Harvest</a>
+</div>
+
+<!-- Summary Stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🍅</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ harvests|length }}</div>
+            <div class="mini-stat-label">Total Harvests</div>
+        </div>
+    </div>
+    <div class="mini-stat orange">
+        <span class="mini-stat-icon">⚖️</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ "%.1f"|format(harvests|sum(attribute='amount')) }}</div>
+            <div class="mini-stat-label">Total Yield (oz)</div>
+        </div>
+    </div>
+    <div class="mini-stat blue">
+        <span class="mini-stat-icon">⭐</span>
+        <div class="mini-stat-content">
+            {% set rated = harvests|selectattr('quality_rating')|list %}
+            <div class="mini-stat-value">{{ "%.1f"|format(rated|sum(attribute='quality_rating') / rated|length) if rated else '-' }}</div>
+            <div class="mini-stat-label">Avg Quality</div>
+        </div>
+    </div>
+</div>
+
+{% if harvests %}
+<div class="card table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Plant</th>
+                <th>Amount</th>
+                <th>Quality</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for harvest in harvests %}
+            <tr>
+                <td>{{ harvest.harvest_date.strftime('%b %d, %Y') }}</td>
+                <td>
+                    <a href="{{ url_for('plant_detail', plant_id=harvest.plant.id) }}" style="text-decoration: none;">
+                        <strong>{{ harvest.plant.plant_name or harvest.plant.seed_variety.variety_name }}</strong>
+                    </a>
+                    <div style="font-size: 0.8rem; color: var(--soil-light);">{{ harvest.plant.seed_variety.plant_type|capitalize }}</div>
+                </td>
+                <td><strong>{{ harvest.amount }}</strong> {{ harvest.unit }}</td>
+                <td>
+                    {% if harvest.quality_rating %}
+                        {% if harvest.quality_rating >= 8 %}
+                            <span class="badge badge-success">{{ harvest.quality_rating }}/10</span>
+                        {% elif harvest.quality_rating >= 5 %}
+                            <span class="badge badge-warning">{{ harvest.quality_rating }}/10</span>
+                        {% else %}
+                            <span class="badge badge-danger">{{ harvest.quality_rating }}/10</span>
+                        {% endif %}
+                    {% else %}
+                        <span style="color: var(--soil-light);">-</span>
+                    {% endif %}
+                </td>
+                <td style="color: var(--soil-light); font-size: 0.85rem;">{{ harvest.notes|truncate(40) if harvest.notes else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🍅</div>
+        <p>No harvests recorded yet</p>
+        <a href="{{ url_for('harvest_add') }}" class="btn" style="margin-top: 1rem;">Record Your First Harvest</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python migrate_v2.py:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(python migrate_v3.py:*)",
+      "Bash(python:*)",
+      "Bash(\"venv/Scripts/pip.exe\" install flask-login)",
+      "Bash(\"venv/Scripts/pip.exe\" install psycopg2-binary gunicorn)",
+      "Bash(\"venv/Scripts/pip.exe\" freeze)",
+      "Bash(\"venv/Scripts/python.exe\" -c \"from app import app; print\\(''App loads OK''\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: garden-tracker
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python migrate_users.py
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false  # You'll set this manually to your existing database
+      - key: ADMIN_USERNAME
+        sync: false  # Set these for first deploy to create admin account
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
