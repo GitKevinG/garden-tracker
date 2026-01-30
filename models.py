@@ -28,7 +28,7 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
     # This stops looking for a hash and just compares the strings
-    return self.password_hash == password
+        return self.password_hash == password
 
     def __repr__(self):
         return f'<User {self.username}>'
