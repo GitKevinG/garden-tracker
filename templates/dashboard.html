@@ -282,6 +282,40 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Hydroponics Status Widget -->
+    <div class="widget">
+        <div class="widget-header" style="background: linear-gradient(135deg, #5b9bd5 0%, #4a8bc2 100%);">
+            <span>Hydroponics</span>
+            <span class="widget-count">{{ active_hydro_plants }} plants</span>
+        </div>
+        <div class="widget-body">
+            {% if reservoir_alerts or ph_ec_alerts %}
+                {% for alert in reservoir_alerts %}
+                <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: #fff3cd; border-radius: 6px; font-size: 0.85rem;">
+                    ⚠️ <strong>{{ alert.system.name }}</strong>: Reservoir change overdue ({{ alert.days }} days)
+                </div>
+                {% endfor %}
+                {% for alert in ph_ec_alerts %}
+                <div style="padding: 0.5rem; margin-bottom: 0.5rem; background: #f8d7da; border-radius: 6px; font-size: 0.85rem;">
+                    🔴 <strong>{{ alert.system.name }}</strong>: {{ alert.type }} ({{ alert.value }})
+                </div>
+                {% endfor %}
+            {% else %}
+                {% if active_hydro_plants > 0 %}
+                <div class="empty-state" style="padding: 1rem;">
+                    <p>All hydro systems running normally</p>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">💧</div>
+                    <p>No active hydro plants</p>
+                    <a href="{{ url_for('hydro_systems_list') }}" class="btn btn-small" style="margin-top: 0.5rem;">Get Started</a>
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 <!-- Quick Actions -->

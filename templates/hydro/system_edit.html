@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ system.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="color: #3e2723; margin: 0;">Edit System: {{ system.name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('hydro_system_detail', system_id=system.id) }}" class="btn btn-secondary">Back to Details</a>
+    </div>
+</div>
+
+<form method="POST">
+    <div class="grid grid-2">
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">System Information</h2>
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" value="{{ system.name }}" required>
+            </div>
+            <div class="form-group">
+                <label>System Type *</label>
+                <select name="system_type" required>
+                    <option value="">Select type...</option>
+                    <option value="drip" {% if system.system_type == 'drip' %}selected{% endif %}>Drip</option>
+                    <option value="dwc" {% if system.system_type == 'dwc' %}selected{% endif %}>DWC (Deep Water Culture)</option>
+                    <option value="nft" {% if system.system_type == 'nft' %}selected{% endif %}>NFT (Nutrient Film Technique)</option>
+                    <option value="kratky" {% if system.system_type == 'kratky' %}selected{% endif %}>Kratky</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Reservoir Size (gallons)</label>
+                <input type="number" name="reservoir_size_gallons" step="0.1" value="{{ system.reservoir_size_gallons or '' }}">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Setup Details</h2>
+            <div class="form-group">
+                <label>Medium Type</label>
+                <select name="medium_type">
+                    <option value="">Select medium...</option>
+                    <option value="coco_coir" {% if system.medium_type == 'coco_coir' %}selected{% endif %}>Coco Coir</option>
+                    <option value="perlite" {% if system.medium_type == 'perlite' %}selected{% endif %}>Perlite</option>
+                    <option value="mixed" {% if system.medium_type == 'mixed' %}selected{% endif %}>Mixed</option>
+                    <option value="clay_pebbles" {% if system.medium_type == 'clay_pebbles' %}selected{% endif %}>Clay Pebbles</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="location" value="{{ system.location or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea name="notes" rows="4">{{ system.notes or '' }}</textarea>
+            </div>
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <form action="{{ url_for('hydro_system_delete', system_id=system.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete this system?');">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+                <button type="submit" class="btn" style="background-color: #4b6a27; padding: 0.8rem 2rem;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

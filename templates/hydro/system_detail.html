@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}{{ system.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>{{ system.name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('hydro_system_edit', system_id=system.id) }}" class="btn">Edit</a>
+        <a href="{{ url_for('hydro_systems_list') }}" class="btn btn-secondary">Back to List</a>
+        <form action="{{ url_for('hydro_system_delete', system_id=system.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete this system?');">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>System Info</h2>
+        <table>
+            <tr>
+                <th>Type</th>
+                <td>{{ system.system_type|upper }}</td>
+            </tr>
+            <tr>
+                <th>Medium</th>
+                <td>{{ system.medium_type|replace('_', ' ')|title if system.medium_type else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Reservoir Size</th>
+                <td>{{ system.reservoir_size_gallons or '-' }} gal</td>
+            </tr>
+            <tr>
+                <th>Location</th>
+                <td>{{ system.location or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if system.status == 'active' %}
+                        <span class="badge badge-success">{{ system.status }}</span>
+                    {% elif system.status == 'inactive' %}
+                        <span class="badge badge-warning">{{ system.status }}</span>
+                    {% else %}
+                        <span class="badge">{{ system.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Bags</th>
+                <td>{{ system.total_bags }}</td>
+            </tr>
+            <tr>
+                <th>Total Emitters</th>
+                <td>{{ system.total_emitters }}</td>
+            </tr>
+            {% if system.notes %}
+            <tr>
+                <th>Notes</th>
+                <td>{{ system.notes }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Latest Reading</h2>
+        {% if latest_reading %}
+        <table>
+            <tr>
+                <th>pH</th>
+                <td>{{ latest_reading.ph or '-' }}</td>
+            </tr>
+            <tr>
+                <th>EC</th>
+                <td>{{ latest_reading.ec or '-' }}</td>
+            </tr>
+            <tr>
+                <th>PPM</th>
+                <td>{{ latest_reading.ppm or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Water Temp</th>
+                <td>{{ latest_reading.water_temp or '-' }}</td>
+            </tr>
+        </table>
+        {% else %}
+        <p>No readings yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if system.days_since_reservoir_change is not none and system.days_since_reservoir_change >= 7 %}
+<div class="card" style="margin-top: 1.5rem; border-left: 4px solid #e53935;">
+    <span class="badge badge-danger">Reservoir change overdue ({{ system.days_since_reservoir_change }} days)</span>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Add Reservoir Log</h2>
+    <form method="POST" action="{{ url_for('hydro_system_log', system_id=system.id) }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Date</label>
+                <input type="date" name="log_date" required>
+            </div>
+            <div class="form-group">
+                <label>pH</label>
+                <input type="number" name="ph" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>EC</label>
+                <input type="number" name="ec" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>PPM</label>
+                <input type="number" name="ppm" step="1">
+            </div>
+            <div class="form-group">
+                <label>Water Temp (F)</label>
+                <input type="number" name="water_temp" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Action</label>
+                <select name="action">
+                    <option value="">Select...</option>
+                    <option value="check">Check</option>
+                    <option value="top_off">Top Off</option>
+                    <option value="full_change">Full Change</option>
+                    <option value="ph_adjust">pH Adjust</option>
+                    <option value="nutrient_add">Nutrient Add</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount (gallons)</label>
+                <input type="number" name="amount_gallons" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Recipe</label>
+                <select name="recipe_id">
+                    <option value="">None</option>
+                    {% for recipe in recipes %}
+                    <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn">Add Log</button>
+    </form>
+</div>
+
+{% if logs %}
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Recent Logs</h2>
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>pH</th>
+                <th>EC</th>
+                <th>PPM</th>
+                <th>Action</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs[:10] %}
+            <tr>
+                <td>{{ log.log_date.strftime('%Y-%m-%d') if log.log_date else '-' }}</td>
+                <td>{{ log.ph or '-' }}</td>
+                <td>{{ log.ec or '-' }}</td>
+                <td>{{ log.ppm or '-' }}</td>
+                <td>{{ log.action|replace('_', ' ')|title if log.action else '-' }}</td>
+                <td>{{ log.notes or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Bags</h2>
+    {% if bags %}
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size (gal)</th>
+                <th>Medium</th>
+                <th>Emitters</th>
+                <th>Position</th>
+                <th>Plants</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bag in bags %}
+            <tr>
+                <td><strong>{{ bag.name }}</strong></td>
+                <td>{{ bag.size_gallons or '-' }}</td>
+                <td>{{ bag.medium_type|replace('_', ' ')|title if bag.medium_type else '-' }}</td>
+                <td>{{ bag.emitter_count }}</td>
+                <td>{{ bag.position or '-' }}</td>
+                <td>{{ bag.active_plant_count }}</td>
+                <td>
+                    <a href="{{ url_for('hydro_bag_edit', bag_id=bag.id) }}" class="btn btn-small">Edit</a>
+                    <form action="{{ url_for('hydro_bag_delete', bag_id=bag.id) }}" method="POST" style="display:inline; margin:0;" onsubmit="return confirm('Delete this bag?');">
+                        <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No bags yet.</p>
+    {% endif %}
+
+    <h3 style="margin-top: 1.5rem;">Add Bag</h3>
+    <form method="POST" action="{{ url_for('hydro_bag_add', system_id=system.id) }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Bag #1">
+            </div>
+            <div class="form-group">
+                <label>Size (gallons)</label>
+                <input type="number" name="size_gallons" step="0.5">
+            </div>
+            <div class="form-group">
+                <label>Medium</label>
+                <select name="medium_type">
+                    <option value="coco_coir">Coco Coir</option>
+                    <option value="perlite">Perlite</option>
+                    <option value="mixed">Mixed</option>
+                    <option value="clay_pebbles">Clay Pebbles</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Emitter Count</label>
+                <input type="number" name="emitter_count" value="1" min="0" step="1">
+            </div>
+            <div class="form-group">
+                <label>Position</label>
+                <input type="text" name="position" placeholder="e.g. Row 1, Left">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn">Add Bag</button>
+    </form>
+</div>
+
+{% if plants %}
+<div class="card" style="margin-top: 1.5rem;">
+    <h2>Plants in System</h2>
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Seed</th>
+                <th>Days Growing</th>
+                <th>Status</th>
+                <th>Health</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td><strong>{{ plant.plant_name }}</strong></td>
+                <td>{{ plant.seed.variety_name if plant.seed else '-' }}</td>
+                <td>{{ plant.days_growing or '-' }}</td>
+                <td>
+                    {% if plant.status == 'producing' %}
+                        <span class="badge badge-success">{{ plant.status }}</span>
+                    {% elif plant.status == 'growing' %}
+                        <span class="badge badge-success">{{ plant.status }}</span>
+                    {% elif plant.status == 'dead' or plant.status == 'removed' %}
+                        <span class="badge badge-danger">{{ plant.status }}</span>
+                    {% else %}
+                        <span class="badge badge-warning">{{ plant.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.health_rating or '-' }}/10</td>
+                <td>
+                    <a href="{{ url_for('hydro_plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Hydro Plants{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Hydro Plants</h1>
+    <a href="{{ url_for('hydro_plant_add') }}" class="btn">+ Add Plant</a>
+</div>
+
+{% if plants %}
+<div class="card table-responsive">
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>System</th>
+                <th>Bag</th>
+                <th>Seed</th>
+                <th>Transplant Date</th>
+                <th>Days Growing</th>
+                <th>Status</th>
+                <th>Health</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td><strong>{{ plant.plant_name }}</strong></td>
+                <td>{{ plant.system.name if plant.system else '-' }}</td>
+                <td>{{ plant.hydro_bag.name if plant.hydro_bag else '-' }}</td>
+                <td>{{ plant.seed.variety_name if plant.seed else '-' }}</td>
+                <td>{{ plant.transplant_date.strftime('%Y-%m-%d') if plant.transplant_date else '-' }}</td>
+                <td>{{ plant.days_growing or '-' }}</td>
+                <td>
+                    {% if plant.status == 'producing' or plant.status == 'growing' %}
+                        <span class="badge badge-success">{{ plant.status }}</span>
+                    {% elif plant.status == 'dead' or plant.status == 'removed' %}
+                        <span class="badge badge-danger">{{ plant.status }}</span>
+                    {% else %}
+                        <span class="badge badge-warning">{{ plant.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.health_rating or '-' }}/10</td>
+                <td>
+                    <a href="{{ url_for('hydro_plant_detail', plant_id=plant.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🌱</div>
+        <p>No hydro plants yet</p>
+        <a href="{{ url_for('hydro_plant_add') }}" class="btn" style="margin-top: 1rem;">Add Your First Hydro Plant</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

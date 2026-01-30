@@ -3,7 +3,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from functools import wraps
 from datetime import datetime, timedelta
 from config import Config
-from models import db, User, Seed, GrowBag, Seedling, Plant, Harvest, ProgressLog, PlantingCalendar
+from models import db, User, Seed, GrowBag, Seedling, Plant, Harvest, ProgressLog, PlantingCalendar, HydroSystem, HydroBag, HydroPlant, NutrientRecipe, ReservoirLog, HydroHarvest
 from sqlalchemy import func, extract
 
 app = Flask(__name__)
@@ -34,9 +34,19 @@ def admin_required(f):
     return decorated_function
 
 
-# Create tables
+# Create tables and apply migrations for new columns
 with app.app_context():
     db.create_all()
+    # Add hydro_bag_id column to hydro_plants if missing (SQLite doesn't alter on create_all)
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    columns = [c['name'] for c in inspector.get_columns('hydro_plants')]
+    if 'hydro_bag_id' not in columns:
+        db.session.execute(text('ALTER TABLE hydro_plants ADD COLUMN hydro_bag_id INTEGER REFERENCES hydro_bags(id)'))
+        db.session.commit()
+    if 'seedling_id' not in columns:
+        db.session.execute(text('ALTER TABLE hydro_plants ADD COLUMN seedling_id INTEGER REFERENCES seedlings(id)'))
+        db.session.commit()
 
 
 # Authentication Routes
@@ -193,6 +203,33 @@ def index():
         func.sum(GrowBag.max_plants - GrowBag.current_plants)
     ).filter(GrowBag.user_id == current_user.id).scalar() or 0
 
+    # Hydroponics data
+    active_hydro_plants = HydroPlant.query.filter(
+        HydroPlant.user_id == current_user.id,
+        HydroPlant.status.in_(['growing', 'flowering', 'producing'])
+    ).count()
+
+    hydro_systems = HydroSystem.query.filter_by(user_id=current_user.id, status='active').all()
+    reservoir_alerts = []
+    ph_ec_alerts = []
+    for sys in hydro_systems:
+        days = sys.days_since_reservoir_change
+        if days is not None and days >= 7:
+            reservoir_alerts.append({'system': sys, 'days': days})
+        reading = sys.latest_reading
+        if reading:
+            # Check recipes for target ranges
+            if reading.recipe:
+                r = reading.recipe
+                if reading.ph_reading and r.target_ph_min and reading.ph_reading < r.target_ph_min:
+                    ph_ec_alerts.append({'system': sys, 'type': 'pH Low', 'value': reading.ph_reading})
+                if reading.ph_reading and r.target_ph_max and reading.ph_reading > r.target_ph_max:
+                    ph_ec_alerts.append({'system': sys, 'type': 'pH High', 'value': reading.ph_reading})
+                if reading.ec_reading and r.target_ec_min and reading.ec_reading < r.target_ec_min:
+                    ph_ec_alerts.append({'system': sys, 'type': 'EC Low', 'value': reading.ec_reading})
+                if reading.ec_reading and r.target_ec_max and reading.ec_reading > r.target_ec_max:
+                    ph_ec_alerts.append({'system': sys, 'type': 'EC High', 'value': reading.ec_reading})
+
     return render_template('dashboard.html',
                          ready_seedlings=ready_seedlings,
                          ready_for_pot_up=ready_for_pot_up,
@@ -202,6 +239,9 @@ def index():
                          active_plants=active_plants,
                          active_seedlings=active_seedlings,
                          available_space=available_space,
+                         active_hydro_plants=active_hydro_plants,
+                         reservoir_alerts=reservoir_alerts,
+                         ph_ec_alerts=ph_ec_alerts,
                          today=today)
 
 
@@ -909,6 +949,372 @@ def api_growbag_capacity():
         'available_space': available,
         'recommendation': f"This {growbag.size_gallons}gal bag can hold {max_capacity} {size_category} plant(s). {available} space(s) available."
     })
+
+
+# ========== Hydroponics Routes ==========
+
+# --- Hydro Systems ---
+@app.route('/hydro/systems')
+@login_required
+def hydro_systems_list():
+    systems = HydroSystem.query.filter_by(user_id=current_user.id).order_by(HydroSystem.name).all()
+    return render_template('hydro/systems_list.html', systems=systems)
+
+
+@app.route('/hydro/systems/add', methods=['GET', 'POST'])
+@login_required
+def hydro_system_add():
+    if request.method == 'POST':
+        system = HydroSystem(
+            user_id=current_user.id,
+            name=request.form['name'],
+            system_type=request.form.get('system_type', 'drip'),
+            reservoir_size_gallons=float(request.form['reservoir_size_gallons']) if request.form.get('reservoir_size_gallons') else None,
+            medium_type=request.form.get('medium_type', 'coco_coir'),
+            location=request.form.get('location'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(system)
+        db.session.commit()
+        flash(f'Added hydro system "{system.name}"!', 'success')
+        return redirect(url_for('hydro_systems_list'))
+    return render_template('hydro/system_add.html')
+
+
+@app.route('/hydro/systems/<int:system_id>')
+@login_required
+def hydro_system_detail(system_id):
+    system = HydroSystem.query.filter_by(id=system_id, user_id=current_user.id).first_or_404()
+    logs = ReservoirLog.query.filter_by(hydro_system_id=system_id).order_by(ReservoirLog.log_date.desc()).limit(10).all()
+    plants = HydroPlant.query.filter_by(hydro_system_id=system_id).filter(
+        HydroPlant.status.in_(['growing', 'flowering', 'producing'])
+    ).all()
+    recipes = NutrientRecipe.query.filter_by(user_id=current_user.id).order_by(NutrientRecipe.name).all()
+    bags = HydroBag.query.filter_by(hydro_system_id=system_id).order_by(HydroBag.name).all()
+    return render_template('hydro/system_detail.html', system=system, logs=logs, plants=plants, recipes=recipes, bags=bags)
+
+
+@app.route('/hydro/systems/<int:system_id>/edit', methods=['GET', 'POST'])
+@login_required
+def hydro_system_edit(system_id):
+    system = HydroSystem.query.filter_by(id=system_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        system.name = request.form['name']
+        system.system_type = request.form.get('system_type', 'drip')
+        system.reservoir_size_gallons = float(request.form['reservoir_size_gallons']) if request.form.get('reservoir_size_gallons') else None
+        system.medium_type = request.form.get('medium_type', 'coco_coir')
+        system.location = request.form.get('location')
+        system.status = request.form.get('status', 'active')
+        system.notes = request.form.get('notes')
+        db.session.commit()
+        flash(f'Updated "{system.name}"!', 'success')
+        return redirect(url_for('hydro_system_detail', system_id=system.id))
+    return render_template('hydro/system_edit.html', system=system)
+
+
+@app.route('/hydro/systems/<int:system_id>/delete', methods=['POST'])
+@login_required
+def hydro_system_delete(system_id):
+    system = HydroSystem.query.filter_by(id=system_id, user_id=current_user.id).first_or_404()
+    name = system.name
+    db.session.delete(system)
+    db.session.commit()
+    flash(f'Deleted hydro system "{name}".', 'success')
+    return redirect(url_for('hydro_systems_list'))
+
+
+@app.route('/hydro/systems/<int:system_id>/log', methods=['GET', 'POST'])
+@login_required
+def hydro_system_log(system_id):
+    system = HydroSystem.query.filter_by(id=system_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        log = ReservoirLog(
+            hydro_system_id=system_id,
+            recipe_id=int(request.form['recipe_id']) if request.form.get('recipe_id') else None,
+            log_date=datetime.strptime(request.form['log_date'], '%Y-%m-%dT%H:%M') if request.form.get('log_date') else datetime.utcnow(),
+            ph_reading=float(request.form['ph_reading']) if request.form.get('ph_reading') else None,
+            ec_reading=float(request.form['ec_reading']) if request.form.get('ec_reading') else None,
+            ppm_reading=float(request.form['ppm_reading']) if request.form.get('ppm_reading') else None,
+            water_temp=float(request.form['water_temp']) if request.form.get('water_temp') else None,
+            action=request.form.get('action', 'reading'),
+            amount_gallons=float(request.form['amount_gallons']) if request.form.get('amount_gallons') else None,
+            notes=request.form.get('notes')
+        )
+        db.session.add(log)
+        db.session.commit()
+        flash('Reservoir log added!', 'success')
+        return redirect(url_for('hydro_system_detail', system_id=system_id))
+    recipes = NutrientRecipe.query.filter_by(user_id=current_user.id).order_by(NutrientRecipe.name).all()
+    return render_template('hydro/system_detail.html', system=system, recipes=recipes,
+                         logs=ReservoirLog.query.filter_by(hydro_system_id=system_id).order_by(ReservoirLog.log_date.desc()).limit(10).all(),
+                         plants=HydroPlant.query.filter_by(hydro_system_id=system_id).filter(HydroPlant.status.in_(['growing', 'flowering', 'producing'])).all())
+
+
+# --- Nutrient Recipes ---
+@app.route('/hydro/recipes')
+@login_required
+def hydro_recipes_list():
+    recipes = NutrientRecipe.query.filter_by(user_id=current_user.id).order_by(NutrientRecipe.name).all()
+    return render_template('hydro/recipes_list.html', recipes=recipes)
+
+
+@app.route('/hydro/recipes/add', methods=['GET', 'POST'])
+@login_required
+def hydro_recipe_add():
+    if request.method == 'POST':
+        recipe = NutrientRecipe(
+            user_id=current_user.id,
+            name=request.form['name'],
+            nutrient_a=float(request.form['nutrient_a']) if request.form.get('nutrient_a') else None,
+            nutrient_b=float(request.form['nutrient_b']) if request.form.get('nutrient_b') else None,
+            epsom_salt=float(request.form['epsom_salt']) if request.form.get('epsom_salt') else None,
+            target_ph_min=float(request.form['target_ph_min']) if request.form.get('target_ph_min') else None,
+            target_ph_max=float(request.form['target_ph_max']) if request.form.get('target_ph_max') else None,
+            target_ec_min=float(request.form['target_ec_min']) if request.form.get('target_ec_min') else None,
+            target_ec_max=float(request.form['target_ec_max']) if request.form.get('target_ec_max') else None,
+            growth_stage=request.form.get('growth_stage'),
+            notes=request.form.get('notes')
+        )
+        db.session.add(recipe)
+        db.session.commit()
+        flash(f'Added recipe "{recipe.name}"!', 'success')
+        return redirect(url_for('hydro_recipes_list'))
+    return render_template('hydro/recipe_add.html')
+
+
+@app.route('/hydro/recipes/<int:recipe_id>')
+@login_required
+def hydro_recipe_detail(recipe_id):
+    recipe = NutrientRecipe.query.filter_by(id=recipe_id, user_id=current_user.id).first_or_404()
+    log_count = ReservoirLog.query.filter_by(recipe_id=recipe_id).count()
+    return render_template('hydro/recipe_detail.html', recipe=recipe, log_count=log_count)
+
+
+@app.route('/hydro/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@login_required
+def hydro_recipe_edit(recipe_id):
+    recipe = NutrientRecipe.query.filter_by(id=recipe_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        recipe.name = request.form['name']
+        recipe.nutrient_a = float(request.form['nutrient_a']) if request.form.get('nutrient_a') else None
+        recipe.nutrient_b = float(request.form['nutrient_b']) if request.form.get('nutrient_b') else None
+        recipe.epsom_salt = float(request.form['epsom_salt']) if request.form.get('epsom_salt') else None
+        recipe.target_ph_min = float(request.form['target_ph_min']) if request.form.get('target_ph_min') else None
+        recipe.target_ph_max = float(request.form['target_ph_max']) if request.form.get('target_ph_max') else None
+        recipe.target_ec_min = float(request.form['target_ec_min']) if request.form.get('target_ec_min') else None
+        recipe.target_ec_max = float(request.form['target_ec_max']) if request.form.get('target_ec_max') else None
+        recipe.growth_stage = request.form.get('growth_stage')
+        recipe.notes = request.form.get('notes')
+        db.session.commit()
+        flash(f'Updated "{recipe.name}"!', 'success')
+        return redirect(url_for('hydro_recipe_detail', recipe_id=recipe.id))
+    return render_template('hydro/recipe_edit.html', recipe=recipe)
+
+
+@app.route('/hydro/recipes/<int:recipe_id>/delete', methods=['POST'])
+@login_required
+def hydro_recipe_delete(recipe_id):
+    recipe = NutrientRecipe.query.filter_by(id=recipe_id, user_id=current_user.id).first_or_404()
+    name = recipe.name
+    db.session.delete(recipe)
+    db.session.commit()
+    flash(f'Deleted recipe "{name}".', 'success')
+    return redirect(url_for('hydro_recipes_list'))
+
+
+# --- Hydro Bags ---
+@app.route('/hydro/systems/<int:system_id>/bags/add', methods=['POST'])
+@login_required
+def hydro_bag_add(system_id):
+    system = HydroSystem.query.filter_by(id=system_id, user_id=current_user.id).first_or_404()
+    bag = HydroBag(
+        user_id=current_user.id,
+        hydro_system_id=system_id,
+        name=request.form['name'],
+        size_gallons=float(request.form['size_gallons']) if request.form.get('size_gallons') else None,
+        medium_type=request.form.get('medium_type', 'coco_coir'),
+        emitter_count=int(request.form.get('emitter_count', 1)),
+        position=request.form.get('position'),
+        notes=request.form.get('notes')
+    )
+    db.session.add(bag)
+    db.session.commit()
+    flash(f'Added bag "{bag.name}" to {system.name}!', 'success')
+    return redirect(url_for('hydro_system_detail', system_id=system_id))
+
+
+@app.route('/hydro/bags/<int:bag_id>/edit', methods=['GET', 'POST'])
+@login_required
+def hydro_bag_edit(bag_id):
+    bag = HydroBag.query.filter_by(id=bag_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        bag.name = request.form['name']
+        bag.size_gallons = float(request.form['size_gallons']) if request.form.get('size_gallons') else None
+        bag.medium_type = request.form.get('medium_type', 'coco_coir')
+        bag.emitter_count = int(request.form.get('emitter_count', 1))
+        bag.position = request.form.get('position')
+        bag.notes = request.form.get('notes')
+        db.session.commit()
+        flash(f'Updated bag "{bag.name}"!', 'success')
+        return redirect(url_for('hydro_system_detail', system_id=bag.hydro_system_id))
+    return render_template('hydro/bag_edit.html', bag=bag)
+
+
+@app.route('/hydro/bags/<int:bag_id>/delete', methods=['POST'])
+@login_required
+def hydro_bag_delete(bag_id):
+    bag = HydroBag.query.filter_by(id=bag_id, user_id=current_user.id).first_or_404()
+    system_id = bag.hydro_system_id
+    name = bag.name
+    db.session.delete(bag)
+    db.session.commit()
+    flash(f'Deleted bag "{name}".', 'success')
+    return redirect(url_for('hydro_system_detail', system_id=system_id))
+
+
+# --- Hydro Plants ---
+@app.route('/hydro/plants')
+@login_required
+def hydro_plants_list():
+    plants = HydroPlant.query.filter_by(user_id=current_user.id).filter(
+        HydroPlant.status.in_(['growing', 'flowering', 'producing'])
+    ).order_by(HydroPlant.transplant_date.desc()).all()
+    return render_template('hydro/plants_list.html', plants=plants)
+
+
+@app.route('/hydro/plants/add', methods=['GET', 'POST'])
+@login_required
+def hydro_plant_add():
+    if request.method == 'POST':
+        seedling_id = int(request.form['seedling_id']) if request.form.get('seedling_id') else None
+        transplant_date = datetime.strptime(request.form['transplant_date'], '%Y-%m-%d').date()
+
+        plant = HydroPlant(
+            user_id=current_user.id,
+            hydro_system_id=int(request.form['hydro_system_id']),
+            hydro_bag_id=int(request.form['hydro_bag_id']) if request.form.get('hydro_bag_id') else None,
+            seed_id=int(request.form['seed_id']) if request.form.get('seed_id') else None,
+            seedling_id=seedling_id,
+            plant_name=request.form['plant_name'],
+            transplant_date=transplant_date,
+            health_rating=int(request.form['health_rating']) if request.form.get('health_rating') else None,
+            notes=request.form.get('notes')
+        )
+        db.session.add(plant)
+
+        # Update seedling status
+        if seedling_id:
+            seedling = Seedling.query.get(seedling_id)
+            available = seedling.quantity_potted_up or seedling.quantity_viable or 0
+            remaining = available - 1
+            if seedling.quantity_potted_up:
+                seedling.quantity_potted_up = max(0, remaining)
+            else:
+                seedling.quantity_viable = max(0, remaining)
+            if remaining <= 0:
+                seedling.status = 'transplanted'
+                seedling.actual_transplant_date = transplant_date
+
+        db.session.commit()
+        flash(f'Added hydro plant "{plant.plant_name}"!', 'success')
+        return redirect(url_for('hydro_plants_list'))
+    systems = HydroSystem.query.filter_by(user_id=current_user.id, status='active').order_by(HydroSystem.name).all()
+    seeds = Seed.query.filter_by(user_id=current_user.id).order_by(Seed.variety_name).all()
+    bags = HydroBag.query.filter_by(user_id=current_user.id).order_by(HydroBag.name).all()
+    seedlings = Seedling.query.filter(
+        Seedling.user_id == current_user.id,
+        Seedling.status.in_(['ready', 'potted_up'])
+    ).all()
+    return render_template('hydro/plant_add.html', systems=systems, seeds=seeds, bags=bags, seedlings=seedlings)
+
+
+@app.route('/hydro/plants/<int:plant_id>')
+@login_required
+def hydro_plant_detail(plant_id):
+    plant = HydroPlant.query.filter_by(id=plant_id, user_id=current_user.id).first_or_404()
+    harvests = HydroHarvest.query.filter_by(hydro_plant_id=plant_id).order_by(HydroHarvest.harvest_date.desc()).all()
+    return render_template('hydro/plant_detail.html', plant=plant, harvests=harvests)
+
+
+@app.route('/hydro/plants/<int:plant_id>/edit', methods=['GET', 'POST'])
+@login_required
+def hydro_plant_edit(plant_id):
+    plant = HydroPlant.query.filter_by(id=plant_id, user_id=current_user.id).first_or_404()
+    if request.method == 'POST':
+        plant.plant_name = request.form['plant_name']
+        plant.hydro_system_id = int(request.form['hydro_system_id'])
+        plant.hydro_bag_id = int(request.form['hydro_bag_id']) if request.form.get('hydro_bag_id') else None
+        plant.seed_id = int(request.form['seed_id']) if request.form.get('seed_id') else None
+        plant.transplant_date = datetime.strptime(request.form['transplant_date'], '%Y-%m-%d').date()
+        plant.status = request.form.get('status', 'growing')
+        plant.health_rating = int(request.form['health_rating']) if request.form.get('health_rating') else None
+        plant.notes = request.form.get('notes')
+        db.session.commit()
+        flash(f'Updated "{plant.plant_name}"!', 'success')
+        return redirect(url_for('hydro_plant_detail', plant_id=plant.id))
+    systems = HydroSystem.query.filter_by(user_id=current_user.id, status='active').order_by(HydroSystem.name).all()
+    seeds = Seed.query.filter_by(user_id=current_user.id).order_by(Seed.variety_name).all()
+    bags = HydroBag.query.filter_by(user_id=current_user.id).order_by(HydroBag.name).all()
+    return render_template('hydro/plant_edit.html', plant=plant, systems=systems, seeds=seeds, bags=bags)
+
+
+@app.route('/hydro/plants/<int:plant_id>/delete', methods=['POST'])
+@login_required
+def hydro_plant_delete(plant_id):
+    plant = HydroPlant.query.filter_by(id=plant_id, user_id=current_user.id).first_or_404()
+    name = plant.plant_name
+    db.session.delete(plant)
+    db.session.commit()
+    flash(f'Deleted hydro plant "{name}".', 'success')
+    return redirect(url_for('hydro_plants_list'))
+
+
+# --- Hydro Harvests ---
+@app.route('/hydro/harvests')
+@login_required
+def hydro_harvests_list():
+    harvests = HydroHarvest.query.join(HydroPlant).filter(
+        HydroPlant.user_id == current_user.id
+    ).order_by(HydroHarvest.harvest_date.desc()).limit(100).all()
+    return render_template('hydro/harvests_list.html', harvests=harvests)
+
+
+@app.route('/hydro/harvests/add', methods=['GET', 'POST'])
+@login_required
+def hydro_harvest_add():
+    if request.method == 'POST':
+        plant_id = int(request.form['hydro_plant_id'])
+        plant = HydroPlant.query.filter_by(id=plant_id, user_id=current_user.id).first_or_404()
+        harvest = HydroHarvest(
+            hydro_plant_id=plant_id,
+            harvest_date=datetime.strptime(request.form['harvest_date'], '%Y-%m-%d').date(),
+            amount=float(request.form['amount']),
+            unit=request.form.get('unit', 'oz'),
+            quality_rating=int(request.form['quality_rating']) if request.form.get('quality_rating') else None,
+            notes=request.form.get('notes')
+        )
+        db.session.add(harvest)
+        db.session.commit()
+        flash(f'Recorded harvest of {harvest.amount}{harvest.unit}!', 'success')
+        return redirect(url_for('hydro_plant_detail', plant_id=plant_id))
+    plants = HydroPlant.query.filter(
+        HydroPlant.user_id == current_user.id,
+        HydroPlant.status.in_(['growing', 'flowering', 'producing'])
+    ).all()
+    return render_template('hydro/harvest_add.html', plants=plants)
+
+
+# --- Reservoir Logs ---
+@app.route('/hydro/logs')
+@login_required
+def hydro_logs_list():
+    system_id = request.args.get('system_id', type=int)
+    query = ReservoirLog.query.join(HydroSystem).filter(HydroSystem.user_id == current_user.id)
+    if system_id:
+        query = query.filter(ReservoirLog.hydro_system_id == system_id)
+    logs = query.order_by(ReservoirLog.log_date.desc()).limit(100).all()
+    systems = HydroSystem.query.filter_by(user_id=current_user.id).order_by(HydroSystem.name).all()
+    return render_template('hydro/logs_list.html', logs=logs, systems=systems, selected_system_id=system_id)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrient Recipes{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Nutrient Recipes</h1>
+    <a href="{{ url_for('hydro_recipe_add') }}" class="btn">+ Add Recipe</a>
+</div>
+
+{% if recipes %}
+<div class="card table-responsive">
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Nutrient A</th>
+                <th>Nutrient B</th>
+                <th>Epsom Salt</th>
+                <th>pH Range</th>
+                <th>EC Range</th>
+                <th>Stage</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for recipe in recipes %}
+            <tr>
+                <td><strong>{{ recipe.name }}</strong></td>
+                <td>{{ recipe.nutrient_a or '-' }} g/gal</td>
+                <td>{{ recipe.nutrient_b or '-' }} g/gal</td>
+                <td>{{ recipe.epsom_salt or '-' }} g/gal</td>
+                <td>{{ recipe.target_ph_min or '-' }} - {{ recipe.target_ph_max or '-' }}</td>
+                <td>{{ recipe.target_ec_min or '-' }} - {{ recipe.target_ec_max or '-' }}</td>
+                <td>{{ recipe.growth_stage|title if recipe.growth_stage else '-' }}</td>
+                <td>
+                    <a href="{{ url_for('hydro_recipe_detail', recipe_id=recipe.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🧪</div>
+        <p>No nutrient recipes yet</p>
+        <a href="{{ url_for('hydro_recipe_add') }}" class="btn" style="margin-top: 1rem;">Add Your First Recipe</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

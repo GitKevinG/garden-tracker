@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>{{ recipe.name }}</h1>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('hydro_recipe_edit', recipe_id=recipe.id) }}" class="btn">Edit</a>
+        <a href="{{ url_for('hydro_recipes_list') }}" class="btn btn-secondary">Back to List</a>
+        <form action="{{ url_for('hydro_recipe_delete', recipe_id=recipe.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Are you sure you want to delete this recipe?');">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h2>Nutrient Amounts</h2>
+        <table>
+            <tr>
+                <th>Nutrient A</th>
+                <td>{{ recipe.nutrient_a or '-' }} g/gal</td>
+            </tr>
+            <tr>
+                <th>Nutrient B</th>
+                <td>{{ recipe.nutrient_b or '-' }} g/gal</td>
+            </tr>
+            <tr>
+                <th>Epsom Salt</th>
+                <td>{{ recipe.epsom_salt or '-' }} g/gal</td>
+            </tr>
+            <tr>
+                <th>Growth Stage</th>
+                <td>{{ recipe.growth_stage|title if recipe.growth_stage else '-' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Target Ranges</h2>
+        <table>
+            <tr>
+                <th>pH Range</th>
+                <td>{{ recipe.target_ph_min or '-' }} - {{ recipe.target_ph_max or '-' }}</td>
+            </tr>
+            <tr>
+                <th>EC Range</th>
+                <td>{{ recipe.target_ec_min or '-' }} - {{ recipe.target_ec_max or '-' }}</td>
+            </tr>
+        </table>
+        {% if recipe.notes %}
+        <div style="margin-top: 1rem;">
+            <strong>Notes:</strong>
+            <p>{{ recipe.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <p>Used in <strong>{{ log_count }}</strong> reservoir log{{ 's' if log_count != 1 else '' }}.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Hydro Systems{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Hydro Systems</h1>
+    <a href="{{ url_for('hydro_system_add') }}" class="btn">+ Add System</a>
+</div>
+
+{% if systems %}
+<div class="card table-responsive">
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Medium</th>
+                <th>Reservoir Size</th>
+                <th>Active Plants</th>
+                <th>Status</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for system in systems %}
+            <tr>
+                <td><strong>{{ system.name }}</strong></td>
+                <td>{{ system.system_type|upper }}</td>
+                <td>{{ system.medium_type|replace('_', ' ')|title }}</td>
+                <td>{{ system.reservoir_size_gallons or '-' }} gal</td>
+                <td>{{ system.active_plant_count }}</td>
+                <td>
+                    {% if system.status == 'active' %}
+                        <span class="badge badge-success">{{ system.status }}</span>
+                    {% elif system.status == 'inactive' %}
+                        <span class="badge badge-warning">{{ system.status }}</span>
+                    {% else %}
+                        <span class="badge">{{ system.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('hydro_system_detail', system_id=system.id) }}" class="btn btn-small">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">💧</div>
+        <p>No hydro systems yet</p>
+        <a href="{{ url_for('hydro_system_add') }}" class="btn" style="margin-top: 1rem;">Add Your First System</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

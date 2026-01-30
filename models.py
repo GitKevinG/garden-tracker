@@ -22,12 +22,17 @@ class User(UserMixin, db.Model):
     grow_bags = db.relationship('GrowBag', backref='owner', lazy=True)
     seedlings = db.relationship('Seedling', backref='owner', lazy=True)
     plants = db.relationship('Plant', backref='owner', lazy=True)
+    hydro_systems = db.relationship('HydroSystem', backref='owner', lazy=True)
+    nutrient_recipes = db.relationship('NutrientRecipe', backref='owner', lazy=True)
+    hydro_plants = db.relationship('HydroPlant', backref='owner', lazy=True)
+    hydro_bags = db.relationship('HydroBag', backref='owner', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-    # This stops looking for a hash and just compares the strings
+        if check_password_hash(self.password_hash, password):
+            return True
         return self.password_hash == password
 
     def __repr__(self):
@@ -287,3 +292,178 @@ class PlantingCalendar(db.Model):
         if weeks < 0:
             return last_frost_date - timedelta(weeks=abs(weeks))
         return last_frost_date + timedelta(weeks=weeks)
+
+
+class HydroSystem(db.Model):
+    """Track hydroponic systems"""
+    __tablename__ = 'hydro_systems'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    system_type = db.Column(db.String(20), default='drip')  # drip/dwc/nft/kratky
+    reservoir_size_gallons = db.Column(db.Float)
+    medium_type = db.Column(db.String(30), default='coco_coir')  # coco_coir/perlite/mixed/clay_pebbles
+    location = db.Column(db.String(100))
+    status = db.Column(db.String(20), default='active')  # active/inactive/maintenance
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    hydro_plants = db.relationship('HydroPlant', backref='system', lazy=True, cascade='all, delete-orphan')
+    reservoir_logs = db.relationship('ReservoirLog', backref='system', lazy=True, cascade='all, delete-orphan')
+    hydro_bags = db.relationship('HydroBag', backref='system', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<HydroSystem {self.name}>'
+
+    @property
+    def total_bags(self):
+        return len(self.hydro_bags)
+
+    @property
+    def total_emitters(self):
+        return sum(b.emitter_count for b in self.hydro_bags)
+
+    @property
+    def active_plant_count(self):
+        return sum(1 for p in self.hydro_plants if p.status in ['growing', 'flowering', 'producing'])
+
+    @property
+    def days_since_reservoir_change(self):
+        changes = [log for log in self.reservoir_logs if log.action == 'full_change']
+        if changes:
+            latest = max(changes, key=lambda l: l.log_date)
+            return (datetime.utcnow() - latest.log_date).days
+        return None
+
+    @property
+    def latest_reading(self):
+        if self.reservoir_logs:
+            return max(self.reservoir_logs, key=lambda l: l.log_date)
+        return None
+
+
+class HydroBag(db.Model):
+    """Track grow bags within a hydro system with drip emitter tracking"""
+    __tablename__ = 'hydro_bags'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    hydro_system_id = db.Column(db.Integer, db.ForeignKey('hydro_systems.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    size_gallons = db.Column(db.Float)
+    medium_type = db.Column(db.String(30), default='coco_coir')
+    emitter_count = db.Column(db.Integer, default=1)
+    position = db.Column(db.String(50))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    hydro_plants = db.relationship('HydroPlant', backref='hydro_bag', lazy=True)
+
+    def __repr__(self):
+        return f'<HydroBag {self.name}>'
+
+    @property
+    def active_plant_count(self):
+        return sum(1 for p in self.hydro_plants if p.status in ['growing', 'flowering', 'producing'])
+
+
+class HydroPlant(db.Model):
+    """Track plants in hydroponic systems"""
+    __tablename__ = 'hydro_plants'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    hydro_system_id = db.Column(db.Integer, db.ForeignKey('hydro_systems.id'), nullable=False)
+    hydro_bag_id = db.Column(db.Integer, db.ForeignKey('hydro_bags.id'), nullable=True)
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'), nullable=True)
+    seedling_id = db.Column(db.Integer, db.ForeignKey('seedlings.id'), nullable=True)
+    plant_name = db.Column(db.String(100), nullable=False)
+    transplant_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='growing')  # growing/flowering/producing/removed/dead
+    health_rating = db.Column(db.Integer)  # 1-10
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    hydro_harvests = db.relationship('HydroHarvest', backref='hydro_plant', lazy=True, cascade='all, delete-orphan')
+    seed = db.relationship('Seed', backref='hydro_plants')
+    seedling = db.relationship('Seedling', backref='hydro_plants')
+
+    def __repr__(self):
+        return f'<HydroPlant {self.plant_name}>'
+
+    @property
+    def days_since_transplant(self):
+        if self.transplant_date:
+            return (datetime.now().date() - self.transplant_date).days
+        return 0
+
+    @property
+    def total_yield(self):
+        return sum(h.amount for h in self.hydro_harvests)
+
+
+class NutrientRecipe(db.Model):
+    """Track nutrient mix recipes for hydroponics"""
+    __tablename__ = 'nutrient_recipes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    nutrient_a = db.Column(db.Float)  # g per gallon
+    nutrient_b = db.Column(db.Float)  # g per gallon
+    epsom_salt = db.Column(db.Float)  # g per gallon
+    target_ph_min = db.Column(db.Float)
+    target_ph_max = db.Column(db.Float)
+    target_ec_min = db.Column(db.Float)
+    target_ec_max = db.Column(db.Float)
+    growth_stage = db.Column(db.String(30))  # seedling/vegetative/flowering/fruiting
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<NutrientRecipe {self.name}>'
+
+
+class ReservoirLog(db.Model):
+    """Track reservoir readings and changes"""
+    __tablename__ = 'reservoir_logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hydro_system_id = db.Column(db.Integer, db.ForeignKey('hydro_systems.id'), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('nutrient_recipes.id'), nullable=True)
+    log_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    ph_reading = db.Column(db.Float)
+    ec_reading = db.Column(db.Float)
+    ppm_reading = db.Column(db.Float)
+    water_temp = db.Column(db.Float)
+    action = db.Column(db.String(20), default='reading')  # reading/top_off/full_change/nutrient_add
+    amount_gallons = db.Column(db.Float)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    recipe = db.relationship('NutrientRecipe', backref='reservoir_logs')
+
+    def __repr__(self):
+        return f'<ReservoirLog {self.action} on {self.log_date}>'
+
+
+class HydroHarvest(db.Model):
+    """Track harvests from hydroponic plants"""
+    __tablename__ = 'hydro_harvests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    hydro_plant_id = db.Column(db.Integer, db.ForeignKey('hydro_plants.id'), nullable=False)
+    harvest_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    amount = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), default='oz')
+    quality_rating = db.Column(db.Integer)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<HydroHarvest {self.amount}{self.unit} on {self.harvest_date}>'

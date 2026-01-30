@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Add Hydro System{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="color: #3e2723; margin: 0;">Add Hydro System</h1>
+    <a href="{{ url_for('hydro_systems_list') }}" class="btn btn-secondary">Back to List</a>
+</div>
+
+<form method="POST">
+    <div class="grid grid-2">
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">System Information</h2>
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Kitchen DWC Bucket">
+            </div>
+            <div class="form-group">
+                <label>System Type *</label>
+                <select name="system_type" required>
+                    <option value="">Select type...</option>
+                    <option value="drip">Drip</option>
+                    <option value="dwc">DWC (Deep Water Culture)</option>
+                    <option value="nft">NFT (Nutrient Film Technique)</option>
+                    <option value="kratky">Kratky</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Reservoir Size (gallons)</label>
+                <input type="number" name="reservoir_size_gallons" step="0.1" placeholder="e.g. 5.0">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="color: #3e2723; margin-top: 0; margin-bottom: 1.5rem; font-size: 1.25rem;">Setup Details</h2>
+            <div class="form-group">
+                <label>Medium Type</label>
+                <select name="medium_type">
+                    <option value="">Select medium...</option>
+                    <option value="coco_coir">Coco Coir</option>
+                    <option value="perlite">Perlite</option>
+                    <option value="mixed">Mixed</option>
+                    <option value="clay_pebbles">Clay Pebbles</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="e.g. Indoor shelf, Garage">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea name="notes" rows="4" placeholder="Additional details..."></textarea>
+            </div>
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn" style="background-color: #4b6a27; padding: 0.8rem 2rem;">Add System</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

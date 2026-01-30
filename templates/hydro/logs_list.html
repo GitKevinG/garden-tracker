@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Reservoir Logs{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Reservoir Logs</h1>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label>Filter by System</label>
+            <select name="system_id" onchange="this.form.submit()">
+                <option value="">All Systems</option>
+                {% for system in systems %}
+                <option value="{{ system.id }}" {% if selected_system_id == system.id %}selected{% endif %}>{{ system.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+{% if logs %}
+<div class="card table-responsive">
+    <table class="table-compact">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>System</th>
+                <th>pH</th>
+                <th>EC</th>
+                <th>PPM</th>
+                <th>Temp</th>
+                <th>Action</th>
+                <th>Recipe</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.log_date.strftime('%Y-%m-%d') if log.log_date else '-' }}</td>
+                <td>
+                    {% if log.system %}
+                        <a href="{{ url_for('hydro_system_detail', system_id=log.system.id) }}">{{ log.system.name }}</a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ log.ph or '-' }}</td>
+                <td>{{ log.ec or '-' }}</td>
+                <td>{{ log.ppm or '-' }}</td>
+                <td>{{ log.water_temp or '-' }}</td>
+                <td>{{ log.action|replace('_', ' ')|title if log.action else '-' }}</td>
+                <td>{{ log.recipe.name if log.recipe else '-' }}</td>
+                <td>{{ log.notes or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <p>No reservoir logs yet</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
