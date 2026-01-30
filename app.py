@@ -42,16 +42,24 @@ with app.app_context():
 # Authentication Routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
         user = User.query.filter_by(username=username).first()
 
+        # --- ADD THESE DEBUG LINES ---
+        print(f"DEBUG: Attempting login for username: '{username}'")
+        if user:
+            print(f"DEBUG: User found in DB! Stored hash: {user.password_hash[:20]}...")
+            match = user.check_password(password)
+            print(f"DEBUG: Does password match? {match}")
+        else:
+            print("DEBUG: No user found with that username.")
+        # -----------------------------
+
         if user and user.check_password(password):
+            # ... rest of your code
             login_user(user)
             flash(f'Welcome back, {user.username}!', 'success')
             next_page = request.args.get('next')
