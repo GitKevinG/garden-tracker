@@ -852,6 +852,25 @@
             text-overflow: ellipsis;
         }
 
+        /* Better Table Swiping */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.1); /* Visual hint to scroll */
+        }
+
+        @media (max-width: 768px) {
+            table {
+                min-width: 600px; /* Forces enough space to keep text readable */
+            }
+            
+            th, td {
+                padding: 0.85rem 0.5rem; /* Thinner padding for mobile */
+            }
+        }
+
         /* Bottom Navigation */
         .bottom-nav {
             display: none;
