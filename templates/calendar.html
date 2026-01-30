@@ -40,8 +40,8 @@
     {% endif %}
 </div>
 
-<!-- Visual Calendar Grid -->
-<div class="card">
+<!-- Visual Calendar Grid (desktop) -->
+<div class="card calendar-desktop">
     <h2>{{ month_name }} {{ year }}</h2>
     <div class="calendar-scroll-wrapper">
     <div class="calendar-grid">
@@ -88,6 +88,65 @@
     </div>
 
     <!-- Legend -->
+    <div class="calendar-legend">
+        <span class="legend-item"><span class="dot seed"></span> Start Seeds</span>
+        <span class="legend-item"><span class="dot transplant"></span> Transplant</span>
+        <span class="legend-item"><span class="dot harvest"></span> Expected Harvest</span>
+    </div>
+</div>
+
+<!-- Mobile Month Event List (replaces grid on small screens) -->
+<div class="card calendar-mobile">
+    <h2>{{ month_name }} {{ year }}</h2>
+    {% set month_events = [] %}
+    {% for week in weeks %}
+        {% for day in week %}
+            {% if day.month == month and day in events %}
+                {% if events[day].seed_starts or events[day].transplants or events[day].harvests %}
+                    {% if month_events.append(day) %}{% endif %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+    {% if month_events %}
+    <div class="calendar-mobile-list">
+        {% for day in month_events %}
+        <div class="calendar-mobile-day {% if day == today %}calendar-mobile-today{% endif %}">
+            <div class="calendar-mobile-date">
+                <span class="calendar-mobile-daynum">{{ day.day }}</span>
+                <span class="calendar-mobile-dayname">{{ day.strftime('%a') }}</span>
+            </div>
+            <div class="calendar-mobile-events">
+                {% for item in events[day].seed_starts %}
+                <div class="calendar-mobile-event seed-start">
+                    <span class="calendar-mobile-dot dot-seed"></span>
+                    <span class="calendar-mobile-action">Start Seeds</span>
+                    <span class="calendar-mobile-name">{{ item.name }}</span>
+                </div>
+                {% endfor %}
+                {% for item in events[day].transplants %}
+                <div class="calendar-mobile-event transplant">
+                    <span class="calendar-mobile-dot dot-transplant"></span>
+                    <span class="calendar-mobile-action">Transplant</span>
+                    <span class="calendar-mobile-name">{{ item.name }}</span>
+                </div>
+                {% endfor %}
+                {% for item in events[day].harvests %}
+                <div class="calendar-mobile-event harvest">
+                    <span class="calendar-mobile-dot dot-harvest"></span>
+                    <span class="calendar-mobile-action">Harvest</span>
+                    <span class="calendar-mobile-name">{{ item.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-tasks">No events this month.</p>
+    {% endif %}
+
     <div class="calendar-legend">
         <span class="legend-item"><span class="dot seed"></span> Start Seeds</span>
         <span class="legend-item"><span class="dot transplant"></span> Transplant</span>

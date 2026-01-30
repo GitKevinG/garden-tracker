@@ -663,6 +663,113 @@
             text-align: center;
         }
 
+        /* Mobile calendar list - hidden on desktop */
+        .calendar-mobile {
+            display: none;
+        }
+
+        .calendar-mobile-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .calendar-mobile-day {
+            display: flex;
+            gap: 1rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid #eee;
+            align-items: flex-start;
+        }
+
+        .calendar-mobile-day:last-child {
+            border-bottom: none;
+        }
+
+        .calendar-mobile-today {
+            background: #e8f5e9;
+            margin: 0 -1rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            border-radius: 8px;
+        }
+
+        .calendar-mobile-date {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 44px;
+            flex-shrink: 0;
+        }
+
+        .calendar-mobile-daynum {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--soil-dark);
+            line-height: 1;
+        }
+
+        .calendar-mobile-dayname {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .calendar-mobile-events {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .calendar-mobile-event {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .calendar-mobile-event.seed-start {
+            background: var(--sun-light);
+        }
+
+        .calendar-mobile-event.transplant {
+            background: #d4edda;
+        }
+
+        .calendar-mobile-event.harvest {
+            background: #d1ecf1;
+        }
+
+        .calendar-mobile-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .dot-seed { background: var(--sun); }
+        .dot-transplant { background: var(--leaf); }
+        .dot-harvest { background: var(--water); }
+
+        .calendar-mobile-action {
+            font-weight: 600;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .calendar-mobile-name {
+            color: var(--soil);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         /* Empty state */
         .empty-state {
             text-align: center;
@@ -1120,7 +1227,15 @@
                 font-size: 1.75rem;
             }
 
-            /* Calendar */
+            /* Calendar - swap grid for list on mobile */
+            .calendar-desktop {
+                display: none;
+            }
+
+            .calendar-mobile {
+                display: block;
+            }
+
             .calendar-nav {
                 flex-direction: column;
                 gap: 0.75rem;
@@ -1133,30 +1248,6 @@
 
             .current-month {
                 font-size: 1.2rem;
-            }
-
-            .calendar-scroll-wrapper {
-                margin: 0 -0.5rem;
-                padding: 0 0.5rem;
-            }
-
-            .calendar-grid {
-                font-size: 0.75rem;
-                min-width: 350px;
-            }
-
-            .calendar-header {
-                padding: 0.5rem 0.25rem;
-                font-size: 0.65rem;
-            }
-
-            .calendar-day {
-                min-height: 60px;
-                padding: 0.25rem;
-            }
-
-            .day-number {
-                font-size: 0.8rem;
             }
 
             .event {
@@ -1313,10 +1404,6 @@
 
             .day-number {
                 font-size: 0.7rem;
-            }
-
-            .event {
-                display: none;
             }
 
             .stat-value {
