@@ -122,6 +122,24 @@ def admin_user_delete(user_id):
     flash(f'User "{username}" deleted.', 'success')
     return redirect(url_for('admin_users'))
 
+@app.route('/create-admin-fix')
+def create_admin_fix():
+    # This uses the app's OWN logic to create a valid user
+    try:
+        # Check if 'admin' exists, if so delete it so we can start fresh
+        old_user = User.query.filter_by(username='admin').first()
+        if old_user:
+            db.session.delete(old_user)
+            db.session.commit()
+
+        new_user = User(username='admin', email='admin@garden.com', is_admin=True)
+        new_user.set_password('garden123') # This is your new temporary password
+        db.session.add(new_user)
+        db.session.commit()
+        return "SUCCESS: User 'admin' created with password 'garden123'. Try logging in now!"
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
 @app.route('/')
 @login_required
 def index():
