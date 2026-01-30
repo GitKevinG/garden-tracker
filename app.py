@@ -47,6 +47,10 @@ with app.app_context():
     if 'seedling_id' not in columns:
         db.session.execute(text('ALTER TABLE hydro_plants ADD COLUMN seedling_id INTEGER REFERENCES seedlings(id)'))
         db.session.commit()
+    user_columns = [c['name'] for c in inspector.get_columns('users')]
+    if 'tutorial_dismissed' not in user_columns:
+        db.session.execute(text('ALTER TABLE users ADD COLUMN tutorial_dismissed BOOLEAN DEFAULT 0'))
+        db.session.commit()
 
 
 # Authentication Routes
@@ -230,6 +234,8 @@ def index():
                 if reading.ec_reading and r.target_ec_max and reading.ec_reading > r.target_ec_max:
                     ph_ec_alerts.append({'system': sys, 'type': 'EC High', 'value': reading.ec_reading})
 
+    show_tutorial = not current_user.tutorial_dismissed
+
     return render_template('dashboard.html',
                          ready_seedlings=ready_seedlings,
                          ready_for_pot_up=ready_for_pot_up,
@@ -242,7 +248,25 @@ def index():
                          active_hydro_plants=active_hydro_plants,
                          reservoir_alerts=reservoir_alerts,
                          ph_ec_alerts=ph_ec_alerts,
+                         show_tutorial=show_tutorial,
                          today=today)
+
+
+# Tutorial Routes
+@app.route('/tutorial')
+@login_required
+def tutorial():
+    """Getting started guide"""
+    return render_template('tutorial.html')
+
+
+@app.route('/tutorial/dismiss', methods=['POST'])
+@login_required
+def tutorial_dismiss():
+    """Dismiss the getting started card on dashboard"""
+    current_user.tutorial_dismissed = True
+    db.session.commit()
+    return redirect(url_for('index'))
 
 
 # Seed Inventory Routes

@@ -5,6 +5,30 @@
 {% block content %}
 <h1>Garden Dashboard</h1>
 
+{% if show_tutorial %}
+<div class="card" style="border-left: 4px solid var(--leaf); margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+        <div>
+            <h2 style="margin-bottom: 0.5rem;">Welcome to Garden Tracker!</h2>
+            <p style="color: var(--soil); margin-bottom: 0.75rem;">Follow these steps to track your garden from seed to harvest:</p>
+            <ol style="margin: 0 0 1rem 1.25rem; color: var(--soil); line-height: 2;">
+                <li>Add your seed varieties</li>
+                <li>Start seedlings and track germination</li>
+                <li>Set up containers or hydro systems</li>
+                <li>Transplant seedlings into containers</li>
+                <li>Log progress and record harvests</li>
+            </ol>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a href="{{ url_for('tutorial') }}" class="btn">View Full Guide</a>
+                <form action="{{ url_for('tutorial_dismiss') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary">Dismiss</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Mini Stats Row -->
 <div class="mini-stats">
     <div class="mini-stat">

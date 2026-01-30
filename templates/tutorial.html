@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Getting Started - Garden Tracker{% endblock %}
+{% block mobile_title %}Getting Started{% endblock %}
+
+{% block content %}
+<h1>Getting Started Guide</h1>
+<p style="color: var(--soil); margin-bottom: 1.5rem;">Follow this seed-to-harvest workflow to get the most out of Garden Tracker.</p>
+
+<div class="card" style="border-left: 4px solid var(--sun);">
+    <h2>1. Add Seeds</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Start by adding your seed varieties to the inventory. Include days to maturity and weeks to transplant
+        so the app can calculate planting schedules and expected harvest dates.
+    </p>
+    <a href="{{ url_for('seed_add') }}" class="btn btn-small">Add Seeds</a>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--leaf-light);">
+    <h2>2. Start Seedlings</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Select a seed variety and set a sow date to start a seedling batch. The seed inventory
+        automatically decrements. Track germination dates and viable counts as they grow.
+    </p>
+    <a href="{{ url_for('seedling_add') }}" class="btn btn-small">Start Seedlings</a>
+</div>
+
+<div class="card" style="border-left: 4px solid #ffc107;">
+    <h2>3. Pot Up Seedlings</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        When seedlings are 14+ days old, pot them up to larger intermediate containers before transplanting
+        outdoors. Record the pot size and quantity potted up.
+    </p>
+    <a href="{{ url_for('seedlings_list') }}" class="btn btn-small">View Seedlings</a>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--clay);">
+    <h2>4. Set Up Containers</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Add your grow bags with size and location info. The app calculates plant capacity based on
+        bag size and plant size category. You can also set up hydroponic systems with bags and emitters.
+    </p>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{{ url_for('growbag_add') }}" class="btn btn-small">Add Grow Bag</a>
+        <a href="{{ url_for('hydro_system_add') }}" class="btn btn-small btn-secondary">Add Hydro System</a>
+    </div>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--leaf);">
+    <h2>5. Transplant</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Create a plant from a ready seedling and assign it to a container. The seedling count
+        updates automatically, and expected harvest dates are calculated from the seed's maturity info.
+    </p>
+    <a href="{{ url_for('plant_add') }}" class="btn btn-small">Transplant</a>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--stem);">
+    <h2>6. Track Progress</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Log observations on each plant: height, growth stage, health rating, issues, and actions taken.
+        Use progress logs to spot trends and catch problems early.
+    </p>
+    <a href="{{ url_for('plants_list') }}" class="btn btn-small">View Plants</a>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--terracotta);">
+    <h2>7. Record Harvests</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Log each harvest with weight or count, unit, and a quality rating. The plant's status
+        updates to "producing" after the first harvest, and yield totals are tracked automatically.
+    </p>
+    <a href="{{ url_for('harvest_add') }}" class="btn btn-small">Record Harvest</a>
+</div>
+
+<div class="card" style="border-left: 4px solid var(--water);">
+    <h2>8. Calendar & Analytics</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        View the planting calendar to see seed start dates, transplant windows, and expected harvests
+        based on your frost dates. Use analytics to compare variety performance across seasons.
+    </p>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{{ url_for('planting_calendar') }}" class="btn btn-small">View Calendar</a>
+        <a href="{{ url_for('analytics') }}" class="btn btn-small btn-secondary">View Analytics</a>
+    </div>
+</div>
+
+{% endblock %}
