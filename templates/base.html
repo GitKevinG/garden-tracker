@@ -852,52 +852,6 @@
             text-overflow: ellipsis;
         }
 
-        /* Better Table Swiping */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 12px;
-            box-shadow: inset -10px 0 10px -10px rgba(0,0,0,0.1); /* Visual hint to scroll */
-        }
-
-        @media (max-width: 768px) {
-            table {
-                min-width: 600px; /* Forces enough space to keep text readable */
-            }
-            
-            th, td {
-                padding: 0.85rem 0.5rem; /* Thinner padding for mobile */
-            }
-        }
-
-        /* Sidebar Footer - Mobile Tap Targets */
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 1.25rem 1rem; /* Increased padding */
-            background: rgba(0,0,0,0.2); /* Darker contrast */
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .user-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.85rem; /* Larger tap area */
-            background: rgba(255,255,255,0.08);
-            border-radius: 12px;
-        }
-
-        .logout-link {
-            background: var(--terracotta); /* Make it look like a small button */
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            color: white;
-            font-size: 0.75rem;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
         /* Bottom Navigation */
         .bottom-nav {
             display: none;
@@ -1552,6 +1506,44 @@
                 Garden Tracker - Zone 7a/b Container Gardening
             </footer>
         </div>
+
+        <!-- Bottom Navigation (mobile only) -->
+        {% if current_user.is_authenticated %}
+        <nav class="bottom-nav">
+            <ul class="bottom-nav-items">
+                <li>
+                    <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+                        <span class="bottom-nav-icon">📊</span>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('plants_list') }}" class="{% if request.endpoint and 'plant' in request.endpoint and 'hydro' not in request.endpoint %}active{% endif %}">
+                        <span class="bottom-nav-icon">🪻</span>
+                        <span>Plants</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('hydro_systems_list') }}" class="{% if request.endpoint and 'hydro' in request.endpoint %}active{% endif %}">
+                        <span class="bottom-nav-icon">💧</span>
+                        <span>Hydro</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('seedlings_list') }}" class="{% if request.endpoint and 'seedling' in request.endpoint %}active{% endif %}">
+                        <span class="bottom-nav-icon">🌱</span>
+                        <span>Seedlings</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="toggleMobileMenu(); return false;">
+                        <span class="bottom-nav-icon">☰</span>
+                        <span>More</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 
     <script>
