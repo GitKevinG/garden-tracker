@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Seed Planner - Garden Tracker{% endblock %}
+{% block mobile_title %}Seed Planner{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Seed Planner</h1>
+    <a href="{{ url_for('planner_new') }}" class="btn">New Plan</a>
+</div>
+
+{% if plans %}
+<div class="grid grid-3">
+    {% for plan in plans %}
+    <div class="card">
+        <h2><a href="{{ url_for('planner_detail', id=plan.id) }}">{{ plan.name }}</a></h2>
+        <p style="color: #666; font-size: 0.85rem; margin-bottom: 0.5rem;">
+            {{ plan.bag_size_gallons }}gal bags &middot; {{ plan.total_bags }} bags total &middot; {{ plan.items|length }} varieties
+        </p>
+        {% if plan.notes %}
+        <p style="color: var(--soil); font-size: 0.85rem; margin-bottom: 0.75rem;">{{ plan.notes }}</p>
+        {% endif %}
+        <p style="color: #999; font-size: 0.75rem;">Updated {{ plan.updated_at.strftime('%b %d, %Y') }}</p>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">🧮</div>
+    <p>No planting plans yet.</p>
+    <p style="margin-top: 0.5rem;"><a href="{{ url_for('planner_new') }}" class="btn">Create Your First Plan</a></p>
+</div>
+{% endif %}
+{% endblock %}

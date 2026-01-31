@@ -73,8 +73,28 @@
     <a href="{{ url_for('harvest_add') }}" class="btn btn-small">Record Harvest</a>
 </div>
 
+<div class="card" style="border-left: 4px solid #8e24aa;">
+    <h2>8. Garden Layout</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Arrange your grow bags and hydro systems on a visual top-down grid. Containers are grouped by
+        location into zones. On desktop, drag and drop to place; double-click a placed container to
+        remove it. On mobile, tap to select then tap a grid cell to place; long-press to remove.
+        Positions are saved automatically.
+    </p>
+    <a href="{{ url_for('garden_layout') }}" class="btn btn-small">Open Garden Layout</a>
+</div>
+
+<div class="card" style="border-left: 4px solid #6a1b9a;">
+    <h2>9. Seed Planner</h2>
+    <p style="color: var(--soil); margin-bottom: 1rem;">
+        Use the Seed Planner to create bag allocation plans. Select varieties, set bag counts, and the
+        calculator figures out how many seeds to start based on germination rates and capacity.
+    </p>
+    <a href="{{ url_for('planner_list') }}" class="btn btn-small">Open Seed Planner</a>
+</div>
+
 <div class="card" style="border-left: 4px solid var(--water);">
-    <h2>8. Calendar & Analytics</h2>
+    <h2>10. Calendar & Analytics</h2>
     <p style="color: var(--soil); margin-bottom: 1rem;">
         View the planting calendar to see seed start dates, transplant windows, and expected harvests
         based on your frost dates. Use analytics to compare variety performance across seasons.

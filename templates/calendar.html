@@ -64,21 +64,36 @@
                     <div class="event event-seed" title="Start {{ item.name }} seeds">Start {{ item.name }}</div>
                     {% endfor %}
                     {% if events[day].seed_starts|length > 3 %}
-                    <div class="event event-seed">+{{ events[day].seed_starts|length - 3 }} more</div>
+                    <div class="event event-seed cal-expand-toggle" onclick="toggleCalExpand(this)" style="cursor:pointer; font-weight:600;">+{{ events[day].seed_starts|length - 3 }} more</div>
+                    <div class="cal-expand-items" style="display:none;">
+                        {% for item in events[day].seed_starts[3:] %}
+                        <div class="event event-seed" title="Start {{ item.name }} seeds">Start {{ item.name }}</div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
 
                     {% for item in events[day].transplants[:3] %}
                     <div class="event event-transplant" title="Transplant {{ item.name }}">Transplant {{ item.name }}</div>
                     {% endfor %}
                     {% if events[day].transplants|length > 3 %}
-                    <div class="event event-transplant">+{{ events[day].transplants|length - 3 }} more</div>
+                    <div class="event event-transplant cal-expand-toggle" onclick="toggleCalExpand(this)" style="cursor:pointer; font-weight:600;">+{{ events[day].transplants|length - 3 }} more</div>
+                    <div class="cal-expand-items" style="display:none;">
+                        {% for item in events[day].transplants[3:] %}
+                        <div class="event event-transplant" title="Transplant {{ item.name }}">Transplant {{ item.name }}</div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
 
                     {% for item in events[day].harvests[:3] %}
                     <div class="event event-harvest" title="Harvest {{ item.name }}">Harvest {{ item.name }}</div>
                     {% endfor %}
                     {% if events[day].harvests|length > 3 %}
-                    <div class="event event-harvest">+{{ events[day].harvests|length - 3 }} more</div>
+                    <div class="event event-harvest cal-expand-toggle" onclick="toggleCalExpand(this)" style="cursor:pointer; font-weight:600;">+{{ events[day].harvests|length - 3 }} more</div>
+                    <div class="cal-expand-items" style="display:none;">
+                        {% for item in events[day].harvests[3:] %}
+                        <div class="event event-harvest" title="Harvest {{ item.name }}">Harvest {{ item.name }}</div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 {% endif %}
             </div>
@@ -163,4 +178,14 @@
         <a href="{{ url_for('planting_calendar', year=today.year, month=today.month) }}" class="btn btn-secondary">Today</a>
     </div>
 </div>
+
+<script>
+function toggleCalExpand(el) {
+    var items = el.nextElementSibling;
+    if (items.style.display === 'none') {
+        items.style.display = 'block';
+        el.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

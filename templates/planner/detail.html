@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.name }} - Seed Planner{% endblock %}
+{% block mobile_title %}{{ plan.name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>{{ plan.name }}</h1>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('planner_list') }}" class="btn btn-secondary btn-small">All Plans</a>
+        <form method="POST" action="{{ url_for('planner_delete', id=plan.id) }}" style="display:inline;" onsubmit="return confirm('Delete this plan?');">
+            <button type="submit" class="btn btn-danger btn-small">Delete Plan</button>
+        </form>
+    </div>
+</div>
+
+{% if plan.notes %}
+<p style="color: var(--soil); margin-bottom: 1rem;">{{ plan.notes }}</p>
+{% endif %}
+
+<!-- Summary stats -->
+<div class="mini-stats">
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🪴</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plan.bag_size_gallons }}gal</div>
+            <div class="mini-stat-label">Bag Size</div>
+        </div>
+    </div>
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🧮</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plan.total_bags }}</div>
+            <div class="mini-stat-label">Total Bags</div>
+        </div>
+    </div>
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🌰</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plan.total_seeds_needed }}</div>
+            <div class="mini-stat-label">Seeds Needed</div>
+        </div>
+    </div>
+    <div class="mini-stat">
+        <span class="mini-stat-icon">🌿</span>
+        <div class="mini-stat-content">
+            <div class="mini-stat-value">{{ plan.items|length }}</div>
+            <div class="mini-stat-label">Varieties</div>
+        </div>
+    </div>
+</div>
+
+<!-- Grouped tables by plant_type -->
+{% if groups %}
+{% for plant_type, items in groups.items() %}
+<div class="widget" style="margin-bottom: 1.5rem;">
+    <div class="widget-header green">
+        <span>{{ plant_type|title }} Bags</span>
+        <span class="widget-count">{{ items|sum(attribute='num_bags') }} bags</span>
+    </div>
+    <div class="widget-body table-responsive" style="padding: 0;">
+        <table class="table-compact">
+            <thead>
+                <tr>
+                    <th>Variety</th>
+                    <th>Bags</th>
+                    <th>Plants/Bag</th>
+                    <th>Total Plants</th>
+                    <th>Seeds to Start</th>
+                    <th>Start Date</th>
+                    <th>Inventory</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                {% set start_date = item.get_seed_start_date(last_frost) %}
+                <tr>
+                    <td>
+                        <strong>{{ item.seed.variety_name }}</strong>
+                        {% if item.is_direct_sow %}<span class="badge badge-info">Direct Sow</span>{% endif %}
+                        {% if item.notes %}<br><small style="color: #888;">{{ item.notes }}</small>{% endif %}
+                    </td>
+                    <td>{{ item.num_bags }}</td>
+                    <td>{{ item.plants_per_bag }}</td>
+                    <td>{{ item.total_plants_needed }}</td>
+                    <td>{{ item.seeds_to_start }}</td>
+                    <td>{{ start_date.strftime('%b %d') }}</td>
+                    <td>
+                        {% if item.seeds_to_start > item.seed.quantity %}
+                            <span class="badge badge-danger">Need {{ item.seeds_to_start - item.seed.quantity }} more</span>
+                        {% else %}
+                            <span class="badge badge-success">{{ item.seed.quantity }} avail</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('planner_remove_item', id=plan.id, item_id=item.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-small" title="Remove">X</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Seed Start Schedule -->
+{% if schedule %}
+<div class="widget" style="margin-bottom: 1.5rem;">
+    <div class="widget-header orange">
+        <span>Seed Start Schedule</span>
+    </div>
+    <div class="widget-body">
+        <div class="timeline">
+            {% for date, items in schedule.items() %}
+            <div class="timeline-item seed-start">
+                <span class="date">{{ date.strftime('%b %d') }}</span>
+                <span>{{ items|map(attribute='seed')|map(attribute='variety_name')|join(', ') }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Inventory Warnings -->
+{% set warnings = [] %}
+{% for item in plan.items %}
+    {% if item.seeds_to_start > item.seed.quantity %}
+        {% if warnings.append(item) %}{% endif %}
+    {% endif %}
+{% endfor %}
+{% if warnings %}
+<div class="widget" style="margin-bottom: 1.5rem;">
+    <div class="widget-header" style="background: #dc2626; border-left: 3px solid #991b1b;">
+        <span>Inventory Warnings</span>
+        <span class="widget-count">{{ warnings|length }}</span>
+    </div>
+    <div class="widget-body">
+        {% for item in warnings %}
+        <div style="padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+            <strong>{{ item.seed.variety_name }}</strong>: need {{ item.seeds_to_start }} seeds, only {{ item.seed.quantity }} in stock ({{ item.seeds_to_start - item.seed.quantity }} short)
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">🌱</div>
+    <p>No varieties added yet. Use the form below to start building your plan.</p>
+</div>
+{% endif %}
+
+<!-- Add Variety Form -->
+<div class="card">
+    <h2>Add Variety</h2>
+    <form method="POST" action="{{ url_for('planner_add_item', id=plan.id) }}">
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label for="seed_id">Seed Variety</label>
+                <select id="seed_id" name="seed_id" required>
+                    <option value="">-- Select Variety --</option>
+                    {% for seed in seeds %}
+                    <option value="{{ seed.id }}">{{ seed.variety_name }} ({{ seed.plant_type }}, {{ seed.quantity }} avail)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="num_bags"># Bags</label>
+                <input type="number" id="num_bags" name="num_bags" value="1" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="plants_per_bag">Plants per Bag (blank = auto)</label>
+                <input type="number" id="plants_per_bag" name="plants_per_bag" min="1" placeholder="Auto from bag size">
+            </div>
+            <div class="form-group">
+                <label for="item_notes">Notes</label>
+                <input type="text" id="item_notes" name="notes" placeholder="e.g. Carpet sow, Use 1/2 packet">
+            </div>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="is_direct_sow" name="is_direct_sow" style="width: auto;">
+            <label for="is_direct_sow" style="margin: 0;">Direct Sow (skip indoor start)</label>
+        </div>
+        <button type="submit" class="btn">Add to Plan</button>
+    </form>
+</div>
+{% endblock %}

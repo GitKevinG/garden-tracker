@@ -3,7 +3,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from functools import wraps
 from datetime import datetime, timedelta
 from config import Config
-from models import db, User, Seed, GrowBag, Seedling, Plant, Harvest, ProgressLog, PlantingCalendar, HydroSystem, HydroBag, HydroPlant, NutrientRecipe, ReservoirLog, HydroHarvest
+from models import db, User, Seed, GrowBag, Seedling, Plant, Harvest, ProgressLog, PlantingCalendar, HydroSystem, HydroBag, HydroPlant, NutrientRecipe, ReservoirLog, HydroHarvest, PlantingPlan, PlantingPlanItem
 from sqlalchemy import func, extract
 
 app = Flask(__name__)
@@ -46,6 +46,18 @@ with app.app_context():
         db.session.commit()
     if 'seedling_id' not in columns:
         db.session.execute(text('ALTER TABLE hydro_plants ADD COLUMN seedling_id INTEGER REFERENCES seedlings(id)'))
+        db.session.commit()
+    # Add grid_row/grid_col to grow_bags if missing
+    gb_columns = [c['name'] for c in inspector.get_columns('grow_bags')]
+    if 'grid_row' not in gb_columns:
+        db.session.execute(text('ALTER TABLE grow_bags ADD COLUMN grid_row INTEGER'))
+        db.session.execute(text('ALTER TABLE grow_bags ADD COLUMN grid_col INTEGER'))
+        db.session.commit()
+    # Add grid_row/grid_col to hydro_systems if missing
+    hs_columns = [c['name'] for c in inspector.get_columns('hydro_systems')]
+    if 'grid_row' not in hs_columns:
+        db.session.execute(text('ALTER TABLE hydro_systems ADD COLUMN grid_row INTEGER'))
+        db.session.execute(text('ALTER TABLE hydro_systems ADD COLUMN grid_col INTEGER'))
         db.session.commit()
     user_columns = [c['name'] for c in inspector.get_columns('users')]
     if 'tutorial_dismissed' not in user_columns:
@@ -1339,6 +1351,204 @@ def hydro_logs_list():
     logs = query.order_by(ReservoirLog.log_date.desc()).limit(100).all()
     systems = HydroSystem.query.filter_by(user_id=current_user.id).order_by(HydroSystem.name).all()
     return render_template('hydro/logs_list.html', logs=logs, systems=systems, selected_system_id=system_id)
+
+
+# ========== Garden Layout Routes ==========
+
+@app.route('/garden/layout')
+@login_required
+def garden_layout():
+    growbags = GrowBag.query.filter_by(user_id=current_user.id).all()
+    hydro_systems = HydroSystem.query.filter_by(user_id=current_user.id).all()
+
+    # Collect all unique locations (zones)
+    zones = set()
+    for gb in growbags:
+        zones.add(gb.location or 'Unassigned')
+    for hs in hydro_systems:
+        zones.add(hs.location or 'Unassigned')
+    if not zones:
+        zones.add('Unassigned')
+    zones = sorted(zones)
+
+    # Build placed/unplaced lists
+    placed = []
+    unplaced = []
+    for gb in growbags:
+        item = {
+            'type': 'growbag', 'id': gb.id, 'name': gb.name,
+            'size': gb.size_gallons, 'zone': gb.location or 'Unassigned',
+            'row': gb.grid_row, 'col': gb.grid_col,
+            'plants': gb.current_plants, 'capacity': gb.max_plants,
+            'is_full': gb.is_full, 'url': url_for('growbag_detail', growbag_id=gb.id)
+        }
+        if gb.grid_row is not None and gb.grid_col is not None:
+            placed.append(item)
+        else:
+            unplaced.append(item)
+    for hs in hydro_systems:
+        item = {
+            'type': 'hydro', 'id': hs.id, 'name': hs.name,
+            'size': hs.reservoir_size_gallons, 'zone': hs.location or 'Unassigned',
+            'row': hs.grid_row, 'col': hs.grid_col,
+            'plants': hs.active_plant_count, 'capacity': hs.total_bags or '-',
+            'is_full': False, 'url': url_for('hydro_system_detail', system_id=hs.id)
+        }
+        if hs.grid_row is not None and hs.grid_col is not None:
+            placed.append(item)
+        else:
+            unplaced.append(item)
+
+    return render_template('garden/layout.html', zones=zones, placed=placed, unplaced=unplaced)
+
+
+@app.route('/garden/layout/update', methods=['POST'])
+@login_required
+def garden_layout_update():
+    data = request.get_json()
+    item_type = data.get('type')
+    item_id = data.get('id')
+    row = data.get('row')
+    col = data.get('col')
+
+    if row is None or col is None or not (0 <= row <= 7 and 0 <= col <= 7):
+        return jsonify({'ok': False, 'error': 'Invalid grid position'}), 400
+
+    if item_type == 'growbag':
+        obj = GrowBag.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    elif item_type == 'hydro':
+        obj = HydroSystem.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    else:
+        return jsonify({'ok': False, 'error': 'Invalid type'}), 400
+
+    obj.grid_row = row
+    obj.grid_col = col
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/garden/layout/remove', methods=['POST'])
+@login_required
+def garden_layout_remove():
+    data = request.get_json()
+    item_type = data.get('type')
+    item_id = data.get('id')
+
+    if item_type == 'growbag':
+        obj = GrowBag.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    elif item_type == 'hydro':
+        obj = HydroSystem.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    else:
+        return jsonify({'ok': False, 'error': 'Invalid type'}), 400
+
+    obj.grid_row = None
+    obj.grid_col = None
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+# ========== Planting Plan Routes ==========
+
+@app.route('/planner')
+@login_required
+def planner_list():
+    plans = PlantingPlan.query.filter_by(user_id=current_user.id).order_by(PlantingPlan.updated_at.desc()).all()
+    return render_template('planner/list.html', plans=plans)
+
+
+@app.route('/planner/new', methods=['GET', 'POST'])
+@login_required
+def planner_new():
+    if request.method == 'POST':
+        plan = PlantingPlan(
+            user_id=current_user.id,
+            name=request.form['name'],
+            bag_size_gallons=int(request.form.get('bag_size_gallons', 10)),
+            notes=request.form.get('notes')
+        )
+        db.session.add(plan)
+        db.session.commit()
+        flash(f'Created plan "{plan.name}"!', 'success')
+        return redirect(url_for('planner_detail', id=plan.id))
+    return render_template('planner/new.html')
+
+
+@app.route('/planner/<int:id>')
+@login_required
+def planner_detail(id):
+    plan = PlantingPlan.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    seeds = Seed.query.filter_by(user_id=current_user.id).order_by(Seed.plant_type, Seed.variety_name).all()
+    last_frost = Config.get_last_frost_date()
+
+    # Group items by plant_type
+    groups = {}
+    for item in plan.items:
+        pt = item.seed.plant_type
+        if pt not in groups:
+            groups[pt] = []
+        groups[pt].append(item)
+
+    # Build seed start schedule
+    schedule = {}
+    for item in plan.items:
+        start_date = item.get_seed_start_date(last_frost)
+        if start_date not in schedule:
+            schedule[start_date] = []
+        schedule[start_date].append(item)
+    schedule = dict(sorted(schedule.items()))
+
+    return render_template('planner/detail.html', plan=plan, seeds=seeds,
+                         groups=groups, schedule=schedule, last_frost=last_frost)
+
+
+@app.route('/planner/<int:id>/add-item', methods=['POST'])
+@login_required
+def planner_add_item(id):
+    plan = PlantingPlan.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    seed_id = int(request.form['seed_id'])
+    seed = Seed.query.filter_by(id=seed_id, user_id=current_user.id).first_or_404()
+
+    plants_per_bag = request.form.get('plants_per_bag')
+    if plants_per_bag:
+        plants_per_bag = int(plants_per_bag)
+    else:
+        plants_per_bag = GrowBag.calculate_capacity(plan.bag_size_gallons, seed.size_category)
+
+    item = PlantingPlanItem(
+        plan_id=plan.id,
+        seed_id=seed_id,
+        num_bags=int(request.form['num_bags']),
+        plants_per_bag=plants_per_bag,
+        is_direct_sow='is_direct_sow' in request.form,
+        notes=request.form.get('notes')
+    )
+    db.session.add(item)
+    db.session.commit()
+    flash(f'Added {seed.variety_name} to plan!', 'success')
+    return redirect(url_for('planner_detail', id=plan.id))
+
+
+@app.route('/planner/<int:id>/remove-item/<int:item_id>', methods=['POST'])
+@login_required
+def planner_remove_item(id, item_id):
+    plan = PlantingPlan.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    item = PlantingPlanItem.query.filter_by(id=item_id, plan_id=plan.id).first_or_404()
+    variety = item.seed.variety_name
+    db.session.delete(item)
+    db.session.commit()
+    flash(f'Removed {variety} from plan.', 'success')
+    return redirect(url_for('planner_detail', id=plan.id))
+
+
+@app.route('/planner/<int:id>/delete', methods=['POST'])
+@login_required
+def planner_delete(id):
+    plan = PlantingPlan.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    name = plan.name
+    db.session.delete(plan)
+    db.session.commit()
+    flash(f'Deleted plan "{name}".', 'success')
+    return redirect(url_for('planner_list'))
 
 
 if __name__ == '__main__':

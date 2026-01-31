@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}New Plan - Seed Planner{% endblock %}
+{% block mobile_title %}New Plan{% endblock %}
+
+{% block content %}
+<h1>Create Planting Plan</h1>
+
+<div class="card" style="max-width: 600px;">
+    <form method="POST">
+        <div class="form-group">
+            <label for="name">Plan Name</label>
+            <input type="text" id="name" name="name" required placeholder="e.g. 17-Bag Hybrid">
+        </div>
+        <div class="form-group">
+            <label for="bag_size_gallons">Default Bag Size (gallons)</label>
+            <input type="number" id="bag_size_gallons" name="bag_size_gallons" value="10" min="1" max="50">
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Optional notes about this plan..."></textarea>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" class="btn">Create Plan</button>
+            <a href="{{ url_for('planner_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

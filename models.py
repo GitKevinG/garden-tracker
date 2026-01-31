@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from math import ceil
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -27,6 +28,7 @@ class User(UserMixin, db.Model):
     nutrient_recipes = db.relationship('NutrientRecipe', backref='owner', lazy=True)
     hydro_plants = db.relationship('HydroPlant', backref='owner', lazy=True)
     hydro_bags = db.relationship('HydroBag', backref='owner', lazy=True)
+    planting_plans = db.relationship('PlantingPlan', backref='owner', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -92,9 +94,11 @@ class GrowBag(db.Model):
     location = db.Column(db.String(100))  # balcony, deck, etc.
     max_plants = db.Column(db.Integer, default=1)
     current_plants = db.Column(db.Integer, default=0)
+    grid_row = db.Column(db.Integer)
+    grid_col = db.Column(db.Integer)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     plants = db.relationship('Plant', backref='container', lazy=True)
     
@@ -307,6 +311,8 @@ class HydroSystem(db.Model):
     medium_type = db.Column(db.String(30), default='coco_coir')  # coco_coir/perlite/mixed/clay_pebbles
     location = db.Column(db.String(100))
     status = db.Column(db.String(20), default='active')  # active/inactive/maintenance
+    grid_row = db.Column(db.Integer)
+    grid_col = db.Column(db.Integer)
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -468,3 +474,64 @@ class HydroHarvest(db.Model):
 
     def __repr__(self):
         return f'<HydroHarvest {self.amount}{self.unit} on {self.harvest_date}>'
+
+
+class PlantingPlan(db.Model):
+    """Saved planting plans with bag allocations"""
+    __tablename__ = 'planting_plans'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    bag_size_gallons = db.Column(db.Integer, default=10)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    items = db.relationship('PlantingPlanItem', backref='plan', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<PlantingPlan {self.name}>'
+
+    @property
+    def total_bags(self):
+        return sum(item.num_bags for item in self.items)
+
+    @property
+    def total_seeds_needed(self):
+        return sum(item.seeds_to_start for item in self.items)
+
+
+class PlantingPlanItem(db.Model):
+    """Individual variety allocation within a planting plan"""
+    __tablename__ = 'planting_plan_items'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plan_id = db.Column(db.Integer, db.ForeignKey('planting_plans.id', ondelete='CASCADE'), nullable=False)
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'), nullable=False)
+    num_bags = db.Column(db.Integer, nullable=False)
+    plants_per_bag = db.Column(db.Integer, nullable=False)
+    is_direct_sow = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.String(200))
+
+    seed = db.relationship('Seed', backref='plan_items')
+
+    def __repr__(self):
+        return f'<PlantingPlanItem {self.seed.variety_name} x{self.num_bags}>'
+
+    @property
+    def total_plants_needed(self):
+        return self.num_bags * self.plants_per_bag
+
+    @property
+    def seeds_to_start(self):
+        total = self.total_plants_needed
+        if self.seed.germination_rate and self.seed.germination_rate > 0:
+            return ceil(total / (self.seed.germination_rate / 100))
+        return total * 2
+
+    def get_seed_start_date(self, last_frost_date):
+        if self.is_direct_sow:
+            return last_frost_date + timedelta(weeks=2)
+        weeks = self.seed.weeks_to_transplant or 6
+        return last_frost_date - timedelta(weeks=weeks)
