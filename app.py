@@ -61,7 +61,7 @@ with app.app_context():
         db.session.commit()
     user_columns = [c['name'] for c in inspector.get_columns('users')]
     if 'tutorial_dismissed' not in user_columns:
-        db.session.execute(text('ALTER TABLE users ADD COLUMN tutorial_dismissed BOOLEAN DEFAULT 0'))
+        db.session.execute(text('ALTER TABLE users ADD COLUMN tutorial_dismissed BOOLEAN DEFAULT FALSE'))
         db.session.commit()
 
 
